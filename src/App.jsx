@@ -17,7 +17,7 @@ const vocabData = [
   { cat: "Tài chính", word: "Reconciliation", ipa: "/ˌrek.ənˌsɪl.iˈeɪ.ʃən/", vi: "Sự đối soát", ex: "Automated reconciliation saves time.", hint: "Gợi ý: Quá trình kế toán dò lại 2 sổ sách xem dòng tiền có khớp nhau không." }
 ];
 
-const runningPlaylist = [
+const runningPlaylistBase = [
   { id: 1, en: "Digital payments are replacing cash transactions in many countries around the world.", vi: "Thanh toán kỹ thuật số đang thay thế giao dịch tiền mặt ở nhiều quốc gia trên thế giới." },
   { id: 2, en: "A substantial increase in revenue indicates that our new payment gateway strategy is working.", vi: "Doanh thu tăng đáng kể cho thấy chiến lược cổng thanh toán mới của chúng ta đang có hiệu quả." },
   { id: 3, en: "Blockchain technology provides a secure and transparent way to record financial transactions.", vi: "Công nghệ blockchain cung cấp cách ghi lại giao dịch tài chính an toàn và minh bạch." },
@@ -200,6 +200,19 @@ const renderVisual = (type) => {
   }
 };
 
+const listeningDataBase = [
+  {
+    text: "The recent discrepancy in the settlement report requires immediate attention from the compliance team.",
+    hint: "Sự sai lệch gần đây trong báo cáo quyết toán cần sự chú ý ngay lập tức từ team tuân thủ.",
+    explanation: "Dạ anh, ở câu này có 3 từ khóa cực kỳ quan trọng anh cần lưu ý nhé:\n• Discrepancy (n): Sự sai lệch, không khớp số liệu.\n• Settlement report: Báo cáo quyết toán (nơi chốt dòng tiền).\n• Compliance team: Đội ngũ tuân thủ pháp lý."
+  },
+  {
+    text: "Our overhead costs have fluctuated substantially during this quarter.",
+    hint: "Chi phí cố định của chúng ta đã dao động đáng kể trong quý này.",
+    explanation: "Anh nghe có chuẩn không ạ? Câu này anh chỉ cần nắm chắc 3 cụm này là ăn điểm giao tiếp nè:\n• Overhead costs: Chi phí cố định (mặt bằng, điện nước, vận hành...).\n• Fluctuate (v): Biến động, dao động lên xuống.\n• Substantially (adv): Một cách đáng kể, mức độ lớn."
+  }
+];
+
 const formatTime = (secs) => {
   const m = String(Math.floor(secs / 60)).padStart(2, '0');
   const s = String(secs % 60).padStart(2, '0');
@@ -211,10 +224,55 @@ const parseVocabPaste = (text) => {
   const catMatch = text.match(/\d+\.\s*([^\n(\r]+)/);
   if (catMatch) cat = catMatch[1].trim();
 
-  const results = [];
-  const ipaPattern = /\/[^/]+\//g;
-  const lines = text.split(/\n|\r\n/);
+  // Try block format first (entries separated by blank lines)
+  const blocks = text.split(/\n[ \t]*\n/);
+  const blockResults = [];
 
+  for (const block of blocks) {
+    const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) continue;
+    const firstLine = lines[0];
+    const ipaMatch = firstLine.match(/\/[^/]+\//);
+    if (!ipaMatch) continue;
+
+    const ipaIndex = firstLine.indexOf(ipaMatch[0]);
+    const beforeIpa = firstLine.substring(0, ipaIndex).trim();
+    const afterIpa = firstLine.substring(ipaIndex + ipaMatch[0].length).trim();
+
+    // Strip leading digits
+    const wordMatch = beforeIpa.match(/^[\d\s]*([A-Za-z][a-zA-Z\s]{0,30}?)\s*$/);
+    if (!wordMatch) continue;
+    const word = wordMatch[1].trim();
+    if (!word) continue;
+
+    // Strip (pos) - prefix, then take Vietnamese part
+    const viRaw = afterIpa.replace(/^\s*\([^)]+\)\s*[-–]?\s*/, '').replace(/^\s*[-–]\s*/, '').trim();
+    const enSentenceIdx = viRaw.search(/[A-Z][^.!?]{4,}[.!?]/);
+    const vi = enSentenceIdx > 0 ? viRaw.substring(0, enSentenceIdx).trim() : viRaw;
+
+    // Find example in remaining lines
+    let ex = '';
+    for (let i = 1; i < lines.length; i++) {
+      const exMatch = lines[i].match(/^(?:Ví dụ|Example|Ex)[:\s]+(.+)/i);
+      if (exMatch) { ex = exMatch[1].trim(); break; }
+      // Fallback: line starts with uppercase English
+      if (!ex && /^[A-Z]/.test(lines[i]) && !/^[A-ZĐẮẶẦ]/.test(lines[i].replace(/[A-Za-z]/g, ''))) {
+        ex = lines[i];
+      }
+    }
+    // If still no ex but there's one embedded in viRaw
+    if (!ex && enSentenceIdx > 0) {
+      ex = viRaw.substring(enSentenceIdx).trim();
+    }
+
+    blockResults.push({ cat, word, ipa: ipaMatch[0].trim(), vi, ex, hint: '' });
+  }
+
+  if (blockResults.length > 0) return blockResults;
+
+  // Fallback: line-by-line (old inline format, e.g. "16Persuade/IPA/Vietnamese Example...")
+  const results = [];
+  const lines = text.split(/\r?\n/);
   for (const line of lines) {
     if (!line.trim() || line.match(/^STT|^Từ vựng/i)) continue;
     const ipaMatch = line.match(/\/[^/]+\//);
@@ -226,7 +284,6 @@ const parseVocabPaste = (text) => {
 
     const wordMatch = beforeIpa.match(/\d+\s*([A-Za-z][a-zA-Z\s]{0,30}?)\s*$/);
     if (!wordMatch) continue;
-
     const word = wordMatch[1].trim();
     if (!word) continue;
 
@@ -234,29 +291,7 @@ const parseVocabPaste = (text) => {
     const viText = exMatch ? afterIpa.substring(0, afterIpa.indexOf(exMatch[0])).trim() : afterIpa.trim();
     const exText = exMatch ? exMatch[0].trim() : '';
 
-    results.push({
-      cat,
-      word,
-      ipa: ipaMatch[0].trim(),
-      vi: viText,
-      ex: exText,
-      hint: ''
-    });
-  }
-
-  if (results.length === 0) {
-    const inlinePattern = /(\d+)\s*([A-Za-z][a-zA-Z\s]{1,25}?)\s*(\/[^/]+\/)\s*([^\n\t/A-Z][^\n\t]*?)\s+([A-Z][^\n\t/\d]{5,})/g;
-    let m;
-    while ((m = inlinePattern.exec(text)) !== null) {
-      results.push({
-        cat,
-        word: m[2].trim(),
-        ipa: m[3].trim(),
-        vi: m[4].trim(),
-        ex: m[5].trim(),
-        hint: ''
-      });
-    }
+    results.push({ cat, word, ipa: ipaMatch[0].trim(), vi: viText, ex: exText, hint: '' });
   }
 
   return results;
@@ -286,9 +321,43 @@ export default function App() {
     }
   });
 
-  const [writingData, setWritingData] = useState(initialWritingData);
-  const [speakingData, setSpeakingData] = useState(initialSpeakingData);
+  const [writingData, setWritingData] = useState(() => {
+    try {
+      const extra = JSON.parse(localStorage.getItem('extraWritingData') || '[]');
+      return [...initialWritingData, ...extra];
+    } catch { return [...initialWritingData]; }
+  });
+  const [speakingData, setSpeakingData] = useState(() => {
+    try {
+      const extra = JSON.parse(localStorage.getItem('extraSpeakingData') || '[]');
+      return [...initialSpeakingData, ...extra];
+    } catch { return [...initialSpeakingData]; }
+  });
   const [isGeneratingNew, setIsGeneratingNew] = useState(false);
+
+  const [allListeningData, setAllListeningData] = useState(() => {
+    try {
+      const extra = JSON.parse(localStorage.getItem('extraListeningData') || '[]');
+      return [...listeningDataBase, ...extra];
+    } catch { return [...listeningDataBase]; }
+  });
+
+  const [allRunningPlaylist, setAllRunningPlaylist] = useState(() => {
+    try {
+      const extra = JSON.parse(localStorage.getItem('extraRunningPlaylist') || '[]');
+      return [...runningPlaylistBase, ...extra];
+    } catch { return [...runningPlaylistBase]; }
+  });
+
+  const [allReadingData, setAllReadingData] = useState(() => {
+    try {
+      const extra = JSON.parse(localStorage.getItem('extraReadingData') || '[]');
+      return [...readingData, ...extra];
+    } catch { return [...readingData]; }
+  });
+
+  const [injectProgress, setInjectProgress] = useState(null);
+  const allRunningPlaylistRef = useRef([]);
 
   const [showAddVocab, setShowAddVocab] = useState(false);
   const [addVocabText, setAddVocabText] = useState('');
@@ -342,7 +411,85 @@ export default function App() {
     setParsedPreview(parsed);
   };
 
-  const handleConfirmAddVocab = () => {
+  const injectVocabIntoSkills = async (newItems) => {
+    const wordsWithEx = newItems.filter(v => v.ex);
+
+    // Listen dictation (no AI)
+    if (wordsWithEx.length > 0) {
+      const newListening = wordsWithEx.map(item => ({
+        text: item.ex,
+        hint: item.vi,
+        explanation: `• ${item.word} ${item.ipa}: ${item.vi}\nVí dụ: "${item.ex}"`
+      }));
+      const prev = JSON.parse(localStorage.getItem('extraListeningData') || '[]');
+      localStorage.setItem('extraListeningData', JSON.stringify([...prev, ...newListening]));
+      setAllListeningData(p => [...p, ...newListening]);
+      setInjectProgress(p => ({ ...p, listen: `✅ Nghe: +${newListening.length} câu` }));
+    }
+
+    // Running playlist (no AI)
+    if (wordsWithEx.length > 0) {
+      const prevRun = JSON.parse(localStorage.getItem('extraRunningPlaylist') || '[]');
+      const nextId = runningPlaylistBase.length + prevRun.length + 1;
+      const newRunning = wordsWithEx.map((item, i) => ({ id: nextId + i, en: item.ex, vi: item.vi }));
+      localStorage.setItem('extraRunningPlaylist', JSON.stringify([...prevRun, ...newRunning]));
+      setAllRunningPlaylist(p => [...p, ...newRunning]);
+      setInjectProgress(p => ({ ...p, running: `✅ Chạy bộ: +${newRunning.length} câu` }));
+    }
+
+    // Gemini calls in parallel
+    const wordList = newItems.map(v => `${v.word}: ${v.vi}`).join(', ');
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+    const [readRes, speakRes, writeRes] = await Promise.allSettled([
+      fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: `Generate a business reading exercise using: ${wordList}. Return JSON.` }] }],
+        generationConfig: { responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { title: { type: 'STRING' }, content: { type: 'STRING' }, question: { type: 'STRING' }, options: { type: 'ARRAY', items: { type: 'STRING' } }, answerIdx: { type: 'INTEGER' }, explanation: { type: 'STRING' }, sampleSentence: { type: 'STRING' }, visualType: { type: 'STRING', enum: ['invoice','chartDown','dashboardAlert'] } }, required: ['title','content','question','options','answerIdx','explanation','sampleSentence','visualType'] } }
+      }) }).then(r => r.json()),
+
+      fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: `Tạo 1 tình huống speaking Fintech/Business dùng các từ: ${wordList}. Trả về JSON.` }] }],
+        generationConfig: { responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { title: { type: 'STRING' }, context: { type: 'STRING' }, role: { type: 'STRING' }, visualType: { type: 'STRING', enum: ['videoCall','presentation'] } }, required: ['title','context','role','visualType'] } }
+      }) }).then(r => r.json()),
+
+      fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: `Tạo 1 tình huống soạn email Fintech dùng các từ: ${wordList}. Trả về JSON.` }] }],
+        generationConfig: { responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { title: { type: 'STRING' }, context: { type: 'STRING' }, task: { type: 'STRING' }, visualType: { type: 'STRING', enum: ['invoice','chartDown','dashboardAlert'] } }, required: ['title','context','task','visualType'] } }
+      }) }).then(r => r.json()),
+    ]);
+
+    if (readRes.status === 'fulfilled' && readRes.value.candidates?.length > 0) {
+      try {
+        const newRead = JSON.parse(readRes.value.candidates[0].content.parts[0].text);
+        const prevRead = JSON.parse(localStorage.getItem('extraReadingData') || '[]');
+        localStorage.setItem('extraReadingData', JSON.stringify([...prevRead, newRead]));
+        setAllReadingData(p => [...p, newRead]);
+        setInjectProgress(p => ({ ...p, read: '✅ Đọc hiểu: Đã tạo' }));
+      } catch { setInjectProgress(p => ({ ...p, read: '❌ Đọc hiểu: Lỗi' })); }
+    } else { setInjectProgress(p => ({ ...p, read: '❌ Đọc hiểu: Lỗi API' })); }
+
+    if (speakRes.status === 'fulfilled' && speakRes.value.candidates?.length > 0) {
+      try {
+        const newSpeak = JSON.parse(speakRes.value.candidates[0].content.parts[0].text);
+        const prevSpeak = JSON.parse(localStorage.getItem('extraSpeakingData') || '[]');
+        localStorage.setItem('extraSpeakingData', JSON.stringify([...prevSpeak, newSpeak]));
+        setSpeakingData(p => [...p, newSpeak]);
+        setInjectProgress(p => ({ ...p, speak: '✅ Nói: Đã tạo' }));
+      } catch { setInjectProgress(p => ({ ...p, speak: '❌ Nói: Lỗi' })); }
+    } else { setInjectProgress(p => ({ ...p, speak: '❌ Nói: Lỗi API' })); }
+
+    if (writeRes.status === 'fulfilled' && writeRes.value.candidates?.length > 0) {
+      try {
+        const newWrite = JSON.parse(writeRes.value.candidates[0].content.parts[0].text);
+        const prevWrite = JSON.parse(localStorage.getItem('extraWritingData') || '[]');
+        localStorage.setItem('extraWritingData', JSON.stringify([...prevWrite, newWrite]));
+        setWritingData(p => [...p, newWrite]);
+        setInjectProgress(p => ({ ...p, write: '✅ Viết: Đã tạo' }));
+      } catch { setInjectProgress(p => ({ ...p, write: '❌ Viết: Lỗi' })); }
+    } else { setInjectProgress(p => ({ ...p, write: '❌ Viết: Lỗi API' })); }
+  };
+
+  const handleConfirmAddVocab = async () => {
     if (!parsedPreview || parsedPreview.length === 0) return;
     const existing = new Set(allVocab.map(v => v.word.toLowerCase()));
     const newItems = parsedPreview.filter(v => !existing.has(v.word.toLowerCase()));
@@ -356,10 +503,22 @@ export default function App() {
       setAllVocab(prev => [...prev, ...newItems]);
     }
 
-    showToast(`Đã thêm ${newItems.length} từ mới${skipped > 0 ? `, bỏ qua ${skipped} từ trùng` : ''}.`);
-    setShowAddVocab(false);
-    setAddVocabText('');
+    const wordsWithEx = newItems.filter(v => v.ex);
+    const progress = {
+      vocab: `✅ Vocab: +${newItems.length} từ${skipped > 0 ? ` (bỏ ${skipped} trùng)` : ''}`,
+      listen: wordsWithEx.length > 0 ? '⏳ Nghe: đang thêm...' : null,
+      running: wordsWithEx.length > 0 ? '⏳ Chạy bộ: đang thêm...' : null,
+      read: newItems.length > 0 ? '⏳ Đọc hiểu: Gemini đang tạo...' : null,
+      speak: newItems.length > 0 ? '⏳ Nói: Gemini đang tạo...' : null,
+      write: newItems.length > 0 ? '⏳ Viết: Gemini đang tạo...' : null,
+    };
+    setInjectProgress(progress);
     setParsedPreview(null);
+    setAddVocabText('');
+
+    if (newItems.length > 0) await injectVocabIntoSkills(newItems);
+
+    setTimeout(() => { setShowAddVocab(false); setInjectProgress(null); }, 1800);
   };
 
   // ── Vocab state ──
@@ -411,27 +570,15 @@ export default function App() {
   const runSpeakTimeoutRef = useRef(null);
   const runIdxRef = useRef(0);
 
-  const listeningData = [
-    {
-      text: "The recent discrepancy in the settlement report requires immediate attention from the compliance team.",
-      hint: "Sự sai lệch gần đây trong báo cáo quyết toán cần sự chú ý ngay lập tức từ team tuân thủ.",
-      explanation: "Dạ anh, ở câu này có 3 từ khóa cực kỳ quan trọng anh cần lưu ý nhé:\n• Discrepancy (n): Sự sai lệch, không khớp số liệu.\n• Settlement report: Báo cáo quyết toán (nơi chốt dòng tiền).\n• Compliance team: Đội ngũ tuân thủ pháp lý."
-    },
-    {
-      text: "Our overhead costs have fluctuated substantially during this quarter.",
-      hint: "Chi phí cố định của chúng ta đã dao động đáng kể trong quý này.",
-      explanation: "Anh nghe có chuẩn không ạ? Câu này anh chỉ cần nắm chắc 3 cụm này là ăn điểm giao tiếp nè:\n• Overhead costs: Chi phí cố định (mặt bằng, điện nước, vận hành...).\n• Fluctuate (v): Biến động, dao động lên xuống.\n• Substantially (adv): Một cách đáng kể, mức độ lớn."
-    }
-  ];
-
   const speakAndAdvance = (idx) => {
-    if (idx >= runningPlaylist.length) {
+    const playlist = allRunningPlaylistRef.current;
+    if (idx >= playlist.length) {
       setRunPlaying(false);
       setRunFinished(true);
       clearInterval(runTimerRef.current);
       return;
     }
-    const utterance = new SpeechSynthesisUtterance(runningPlaylist[idx].en);
+    const utterance = new SpeechSynthesisUtterance(playlist[idx].en);
     utterance.rate = 0.85;
     utterance.lang = 'en-US';
     utterance.onend = () => {
@@ -483,6 +630,10 @@ export default function App() {
     setRunSeconds(0);
     setRunFinished(false);
   };
+
+  useEffect(() => {
+    allRunningPlaylistRef.current = allRunningPlaylist;
+  }, [allRunningPlaylist]);
 
   useEffect(() => {
     return () => {
@@ -798,11 +949,11 @@ Bản sửa chuẩn Executive:
   // ── Render: Listen ──
   const renderListen = () => (
     <div className="animate-fade-in flex flex-col h-full w-full max-w-3xl mx-auto py-2">
-      <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2 shrink-0">
-        <div className="p-1.5 bg-amber-100 text-amber-600 rounded-lg"><IconListen /></div> Luyện Nghe
+      <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2 shrink-0">
+        <div className="p-1 bg-amber-100 text-amber-600 rounded-lg"><IconListen /></div> Luyện Nghe
       </h2>
 
-      <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 mb-4 shrink-0">
+      <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 mb-2 shrink-0">
         <button onClick={() => setListenTabMode('dictation')} className={`flex-1 py-1.5 rounded-lg text-sm font-semibold transition-all ${listenTabMode === 'dictation' ? 'bg-white text-amber-600 shadow' : 'text-gray-500 hover:text-gray-800'}`}>
           Chép Chính Tả
         </button>
@@ -813,18 +964,18 @@ Bản sửa chuẩn Executive:
 
       {listenTabMode === 'dictation' && (
         <>
-          <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm mb-4 text-center relative overflow-hidden shrink-0">
+          <div className="bg-white border border-gray-200 rounded-3xl p-4 shadow-sm mb-2 text-center relative overflow-hidden shrink-0">
             <div className="absolute top-0 left-0 w-full h-1 bg-amber-400"></div>
-            <button onClick={() => playAudio(listeningData[listenIdx].text)} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-full p-4 inline-flex items-center justify-center transition-transform hover:scale-105 shadow-lg shadow-amber-500/30 mb-4">
+            <button onClick={() => playAudio(allListeningData[listenIdx].text)} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-full p-4 inline-flex items-center justify-center transition-transform hover:scale-105 shadow-lg shadow-amber-500/30 mb-4">
               <IconPlay />
             </button>
             <p className="text-gray-600 font-medium text-sm mb-2">Bấm Play, nghe câu nói của đối tác và gõ lại chính xác nội dung.</p>
-            <p className="text-[11px] text-gray-500 italic bg-amber-50 inline-block px-3 py-1.5 rounded-full border border-amber-100">Hint: {listeningData[listenIdx].hint}</p>
+            <p className="text-[11px] text-gray-500 italic bg-amber-50 inline-block px-3 py-1.5 rounded-full border border-amber-100">Hint: {allListeningData[listenIdx].hint}</p>
           </div>
 
           <textarea
             value={listenInput} onChange={(e) => setListenInput(e.target.value)}
-            className="w-full flex-1 min-h-[80px] bg-white border border-gray-200 rounded-2xl p-4 text-gray-900 text-base resize-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 mb-4 outline-none shadow-inner"
+            className="w-full flex-1 min-h-[64px] bg-white border border-gray-200 rounded-2xl p-3 text-gray-900 text-sm resize-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 mb-2 outline-none shadow-inner"
             placeholder="Type exactly what you hear here..."
           />
 
@@ -833,9 +984,9 @@ Bản sửa chuẩn Executive:
               <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
               <div className="flex justify-between items-center mb-2">
                 <p className="text-green-700 font-bold text-xs uppercase tracking-wide">Đáp án Audio:</p>
-                <button onClick={() => playAudio(listeningData[listenIdx].text)} className="text-green-700 hover:text-green-900"><IconPlay /></button>
+                <button onClick={() => playAudio(allListeningData[listenIdx].text)} className="text-green-700 hover:text-green-900"><IconPlay /></button>
               </div>
-              <p className="text-gray-900 text-lg font-medium mb-3">{listeningData[listenIdx].text}</p>
+              <p className="text-gray-900 text-lg font-medium mb-3">{allListeningData[listenIdx].text}</p>
               <div className="bg-white rounded-2xl p-4 border border-green-100 shadow-sm">
                 <div className="flex items-center gap-2 mb-2 border-b border-green-50 pb-2">
                   <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center shadow-sm border border-green-200">
@@ -843,7 +994,7 @@ Bản sửa chuẩn Executive:
                   </div>
                   <h4 className="text-green-800 font-bold text-sm">Góc phân tích:</h4>
                 </div>
-                <p className="text-gray-700 whitespace-pre-line text-xs leading-relaxed font-mono p-1">{listeningData[listenIdx].explanation}</p>
+                <p className="text-gray-700 whitespace-pre-line text-xs leading-relaxed font-mono p-1">{allListeningData[listenIdx].explanation}</p>
               </div>
             </div>
           )}
@@ -852,7 +1003,7 @@ Bản sửa chuẩn Executive:
             <button onClick={() => setShowListenAnswer(!showListenAnswer)} className="flex-1 py-2.5 bg-white hover:bg-gray-50 rounded-xl text-gray-700 font-bold text-sm border border-gray-300 transition shadow-sm">
               {showListenAnswer ? 'Ẩn đáp án' : 'Xem đáp án'}
             </button>
-            <button onClick={() => { setListenIdx((prev) => (prev + 1) % listeningData.length); setListenInput(''); setShowListenAnswer(false); }} className="flex-1 py-2.5 bg-gray-900 hover:bg-gray-800 rounded-xl text-white font-bold text-sm transition shadow-md flex items-center justify-center gap-2">
+            <button onClick={() => { setListenIdx((prev) => (prev + 1) % allListeningData.length); setListenInput(''); setShowListenAnswer(false); }} className="flex-1 py-2.5 bg-gray-900 hover:bg-gray-800 rounded-xl text-white font-bold text-sm transition shadow-md flex items-center justify-center gap-2">
               Câu tiếp <IconRandom />
             </button>
           </div>
@@ -868,9 +1019,9 @@ Bản sửa chuẩn Executive:
             </div>
             <div className="flex-1 mx-5">
               <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1.5 overflow-hidden">
-                <div className="bg-green-500 h-2.5 rounded-full transition-all duration-700" style={{ width: `${(Math.min(runIdx, runningPlaylist.length) / runningPlaylist.length) * 100}%` }} />
+                <div className="bg-green-500 h-2.5 rounded-full transition-all duration-700" style={{ width: `${(Math.min(runIdx, allRunningPlaylist.length) / allRunningPlaylist.length) * 100}%` }} />
               </div>
-              <p className="text-xs text-gray-500 text-center">{Math.min(runIdx + 1, runningPlaylist.length)} / {runningPlaylist.length} câu</p>
+              <p className="text-xs text-gray-500 text-center">{Math.min(runIdx + 1, allRunningPlaylist.length)} / {allRunningPlaylist.length} câu</p>
             </div>
             <div className="text-center">
               <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-0.5">Trạng thái</p>
@@ -880,15 +1031,15 @@ Bản sửa chuẩn Executive:
             </div>
           </div>
 
-          {!runFinished && runIdx < runningPlaylist.length && (
+          {!runFinished && runIdx < allRunningPlaylist.length && (
             <div className="bg-white border-2 border-green-400 rounded-2xl p-5 shadow-md shrink-0">
               <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest mb-2">Đang phát</p>
-              <p className="text-xl font-semibold text-gray-800 leading-relaxed mb-3">{runningPlaylist[runIdx].en}</p>
-              <p className="text-sm text-blue-700 italic border-t border-green-100 pt-2">{runningPlaylist[runIdx].vi}</p>
+              <p className="text-xl font-semibold text-gray-800 leading-relaxed mb-3">{allRunningPlaylist[runIdx].en}</p>
+              <p className="text-sm text-blue-700 italic border-t border-green-100 pt-2">{allRunningPlaylist[runIdx].vi}</p>
             </div>
           )}
 
-          {!runFinished && runIdx + 1 < runningPlaylist.length && (
+          {!runFinished && runIdx + 1 < allRunningPlaylist.length && (
             <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 shrink-0">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Câu tiếp theo</p>
               <p className="text-base text-gray-500 leading-relaxed">{runningPlaylist[runIdx + 1].en}</p>
@@ -899,31 +1050,31 @@ Bản sửa chuẩn Executive:
             <div className="bg-gradient-to-br from-green-50 to-teal-50 border border-green-300 rounded-2xl p-6 text-center shadow-md shrink-0">
               <p className="text-4xl mb-3">🎉</p>
               <p className="text-xl font-black text-green-700 mb-1">Session hoàn thành!</p>
-              <p className="text-sm text-green-600">Thời gian: <strong>{formatTime(runSeconds)}</strong> — {runningPlaylist.length} câu</p>
+              <p className="text-sm text-green-600">Thời gian: <strong>{formatTime(runSeconds)}</strong> — {allRunningPlaylist.length} câu</p>
             </div>
           )}
 
           <div className="flex gap-3 shrink-0">
             <button
               onClick={runPlaying ? handleRunPause : handleRunPlay}
-              className={`flex-1 h-16 rounded-2xl text-white font-bold text-lg shadow-lg active:scale-95 transition-transform ${runPlaying ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'}`}
+              className={`flex-1 h-12 rounded-2xl text-white font-bold text-sm shadow-lg active:scale-95 transition-transform ${runPlaying ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'}`}
             >
               {runPlaying ? '⏸ Tạm dừng' : runFinished ? '🔄 Chạy lại' : '▶ Bắt đầu'}
             </button>
-            <button onClick={handleRunSkip} disabled={runFinished || runIdx >= runningPlaylist.length - 1} className="w-16 h-16 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-2xl shadow-lg active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed">
+            <button onClick={handleRunSkip} disabled={runFinished || runIdx >= allRunningPlaylist.length - 1} className="w-12 h-12 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white font-bold text-xl shadow-lg active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed">
               ⏭
             </button>
-            <button onClick={handleRunStop} className="w-16 h-16 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-bold text-2xl shadow-lg active:scale-95 transition-transform">
+            <button onClick={handleRunStop} className="w-12 h-12 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-bold text-xl shadow-lg active:scale-95 transition-transform">
               ⏹
             </button>
           </div>
 
           <details className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden shrink-0">
             <summary className="px-4 py-3 cursor-pointer text-sm font-semibold text-gray-600 hover:bg-gray-100 select-none">
-              Xem tất cả {runningPlaylist.length} câu
+              Xem tất cả {allRunningPlaylist.length} câu
             </summary>
             <div className="max-h-56 overflow-y-auto px-4 pb-4">
-              {runningPlaylist.map((item, i) => (
+              {allRunningPlaylist.map((item, i) => (
                 <div key={item.id} className={`py-2 border-b border-gray-100 last:border-0 text-sm ${i === runIdx && !runFinished ? 'text-green-700 font-semibold' : i < runIdx ? 'text-gray-400 line-through' : 'text-gray-600'}`}>
                   <span className="text-xs text-gray-400 mr-2 font-mono">{i + 1}.</span>{item.en}
                 </div>
@@ -938,26 +1089,26 @@ Bản sửa chuẩn Executive:
   // ── Render: Read ──
   const renderRead = () => (
     <div className="animate-fade-in flex flex-col h-full w-full max-w-4xl mx-auto py-2">
-      <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2 shrink-0">
-        <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg"><IconRead /></div> Đọc Hiểu Văn Bản
+      <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2 shrink-0">
+        <div className="p-1 bg-indigo-100 text-indigo-600 rounded-lg"><IconRead /></div> Đọc Hiểu Văn Bản
       </h2>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4 shrink-0">
-        <div className="lg:col-span-3 bg-white border border-gray-200 rounded-3xl p-6 shadow-sm relative overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-2 shrink-0">
+        <div className="lg:col-span-3 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-indigo-400"></div>
-          <h3 className="text-lg font-bold text-gray-900 mb-3 border-b border-gray-100 pb-2">{readingData[readIdx].title}</h3>
-          <p className="text-gray-700 leading-relaxed text-sm font-serif">{readingData[readIdx].content}</p>
+          <h3 className="text-lg font-bold text-gray-900 mb-3 border-b border-gray-100 pb-2">{allReadingData[readIdx].title}</h3>
+          <p className="text-gray-700 leading-relaxed text-sm font-serif">{allReadingData[readIdx].content}</p>
         </div>
         <div className="lg:col-span-2 hidden lg:block h-full">
-          {renderVisual(readingData[readIdx].visualType)}
+          {renderVisual(allReadingData[readIdx].visualType)}
         </div>
       </div>
 
       <div className="flex-1 bg-gray-50 border border-gray-200 rounded-3xl p-5 shadow-inner flex flex-col overflow-y-auto min-h-0">
-        <p className="font-bold text-gray-900 mb-4 text-sm shrink-0">{readingData[readIdx].question}</p>
+        <p className="font-bold text-gray-900 mb-4 text-sm shrink-0">{allReadingData[readIdx].question}</p>
         <div className="flex flex-col gap-2 shrink-0">
-          {readingData[readIdx].options.map((opt, i) => {
-            const isCorrect = i === readingData[readIdx].answerIdx;
+          {allReadingData[readIdx].options.map((opt, i) => {
+            const isCorrect = i === allReadingData[readIdx].answerIdx;
             const isSelected = readAnswered === i;
             let btnClass = "bg-white border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-200";
             let icon = null;
@@ -983,20 +1134,20 @@ Bản sửa chuẩn Executive:
               </div>
               <h4 className="text-blue-800 font-bold text-sm">Tiểu Nguyên giải thích:</h4>
             </div>
-            <p className="text-gray-800 leading-relaxed mb-3 text-xs font-medium">{readingData[readIdx].explanation}</p>
+            <p className="text-gray-800 leading-relaxed mb-3 text-xs font-medium">{allReadingData[readIdx].explanation}</p>
 
-            {readingData[readIdx].sampleSentence && (
+            {allReadingData[readIdx].sampleSentence && (
               <div className="mt-2 bg-indigo-50 border-l-4 border-indigo-400 rounded-r-xl p-3 flex justify-between items-start gap-2">
                 <div>
                   <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide mb-1">Câu ví dụ thực chiến</p>
-                  <p className="text-sm italic text-indigo-800">"{readingData[readIdx].sampleSentence}"</p>
+                  <p className="text-sm italic text-indigo-800">"{allReadingData[readIdx].sampleSentence}"</p>
                 </div>
-                <button onClick={() => playAudio(readingData[readIdx].sampleSentence)} className="text-indigo-400 hover:text-indigo-700 shrink-0 mt-1"><IconPlay /></button>
+                <button onClick={() => playAudio(allReadingData[readIdx].sampleSentence)} className="text-indigo-400 hover:text-indigo-700 shrink-0 mt-1"><IconPlay /></button>
               </div>
             )}
 
             <div className="flex justify-end mt-3">
-              <button onClick={() => { setReadIdx((prev) => (prev + 1) % readingData.length); setReadAnswered(null); }} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-xs font-bold shadow-md transition">Bài tiếp theo</button>
+              <button onClick={() => { setReadIdx((prev) => (prev + 1) % allReadingData.length); setReadAnswered(null); }} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-xs font-bold shadow-md transition">Bài tiếp theo</button>
             </div>
           </div>
         )}
@@ -1007,19 +1158,19 @@ Bản sửa chuẩn Executive:
   // ── Render: Speak ──
   const renderSpeak = () => (
     <div className="animate-fade-in flex flex-col h-full w-full max-w-4xl mx-auto py-2">
-      <div className="flex justify-between items-center mb-4 shrink-0">
-        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg"><IconSpeak /></div> Luyện Nói (Voice AI)
+      <div className="flex justify-between items-center mb-2 shrink-0">
+        <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+          <div className="p-1 bg-rose-100 text-rose-600 rounded-lg"><IconSpeak /></div> Luyện Nói (Voice AI)
         </h2>
         <button onClick={handleGenerateSpeakingScenario} disabled={isGeneratingNew} className="text-xs font-semibold text-rose-600 hover:text-rose-900 px-3 py-1.5 bg-rose-50 rounded-lg border border-rose-200 transition shadow-sm flex items-center gap-1">
           {isGeneratingNew ? <IconLoading /> : <IconSparkles />} Tạo Bằng AI
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 shrink-0">
-        <div className="md:col-span-3 bg-white border border-gray-200 rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-center">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-2 shrink-0">
+        <div className="md:col-span-3 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-center">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-rose-400"></div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">{speakingData[speakIdx].title}</h3>
+          <h3 className="text-sm font-bold text-gray-900 mb-1.5">{speakingData[speakIdx].title}</h3>
           <p className="text-gray-700 text-sm mb-3 leading-relaxed"><strong className="text-gray-900">Bối cảnh:</strong> {speakingData[speakIdx].context}</p>
           <div className="bg-rose-50 border border-rose-100 rounded-xl p-3">
             <p className="text-sm text-rose-800"><strong className="text-rose-600 block mb-1">Nhiệm vụ:</strong> {speakingData[speakIdx].role}</p>
@@ -1051,7 +1202,7 @@ Bản sửa chuẩn Executive:
       </div>
 
       {speakFeedback && (
-        <div className="mt-4 bg-gradient-to-br from-rose-50 to-white border border-rose-200 rounded-3xl p-5 shadow-md animate-fade-in relative overflow-hidden shrink-0">
+        <div className="mt-2 bg-gradient-to-br from-rose-50 to-white border border-rose-200 rounded-3xl p-4 shadow-md animate-fade-in relative overflow-hidden shrink-0 max-h-52 overflow-y-auto">
           <div className="absolute top-0 right-0 p-5 opacity-5 text-rose-500 transform scale-[2]"><IconSparkles /></div>
           <div className="flex items-center gap-2 mb-3 border-b border-rose-100 pb-2">
             <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm border border-rose-200">
@@ -1074,9 +1225,9 @@ Bản sửa chuẩn Executive:
   // ── Render: Write ──
   const renderWrite = () => (
     <div className="animate-fade-in flex flex-col h-full w-full max-w-4xl mx-auto py-2">
-      <div className="flex justify-between items-center mb-4 shrink-0">
-        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-          <div className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg"><IconWrite /></div> Viết Email
+      <div className="flex justify-between items-center mb-2 shrink-0">
+        <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+          <div className="p-1 bg-emerald-100 text-emerald-600 rounded-lg"><IconWrite /></div> Viết Email
         </h2>
         <div className="flex gap-2">
           <button onClick={handleGenerateWritingScenario} disabled={isGeneratingNew} className="text-xs font-semibold text-emerald-600 hover:text-emerald-900 px-3 py-1.5 bg-emerald-50 rounded-lg border border-emerald-200 transition shadow-sm flex items-center gap-1">
@@ -1088,10 +1239,10 @@ Bản sửa chuẩn Executive:
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 shrink-0">
-        <div className="md:col-span-3 bg-white border border-gray-200 rounded-3xl p-6 shadow-sm relative overflow-hidden flex flex-col justify-center">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-2 shrink-0">
+        <div className="md:col-span-3 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-center">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-400"></div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">{writingData[writeIdx].title}</h3>
+          <h3 className="text-sm font-bold text-gray-900 mb-1.5">{writingData[writeIdx].title}</h3>
           <p className="text-gray-700 text-sm mb-3 leading-relaxed"><strong className="text-gray-900">Bối cảnh:</strong> {writingData[writeIdx].context}</p>
           <p className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-100 p-3 rounded-xl"><strong className="text-emerald-700 block mb-1">Nhiệm vụ:</strong> {writingData[writeIdx].task}</p>
         </div>
@@ -1120,7 +1271,7 @@ Bản sửa chuẩn Executive:
       </div>
 
       {writeFeedback && (
-        <div className="mt-4 bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-6 shadow-lg text-gray-300 animate-fade-in relative overflow-hidden shrink-0">
+        <div className="mt-2 bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-4 shadow-lg text-gray-300 animate-fade-in relative overflow-hidden shrink-0 max-h-52 overflow-y-auto">
           <div className="absolute top-0 right-0 p-6 opacity-10 text-emerald-500 transform scale-[2]"><IconSparkles /></div>
           <h4 className="flex items-center gap-2 text-emerald-400 font-bold mb-4 text-sm border-b border-gray-700 pb-3">
             <IconSparkles /> Tiểu Nguyên Feedback
@@ -1174,8 +1325,8 @@ Bản sửa chuẩn Executive:
       </aside>
 
       <main className="flex-1 flex flex-col h-full relative overflow-hidden">
-        <header className="h-14 flex items-center justify-between px-6 border-b border-gray-100 bg-white/80 backdrop-blur-md shrink-0 z-10">
-          <h1 className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-700 to-gray-900 tracking-tight hidden sm:block">FINTECH REFLEX</h1>
+        <header className="h-10 flex items-center justify-between px-4 border-b border-gray-100 bg-white/80 backdrop-blur-md shrink-0 z-10">
+          <h1 className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-700 to-gray-900 tracking-tight hidden sm:block">FINTECH REFLEX</h1>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold px-3 py-1 bg-gray-100 text-gray-500 rounded-full border border-gray-200">
               {activeModule === 'vocab' && `Từ Vựng Doanh Nghiệp (${allVocab.length} từ)`}
@@ -1207,47 +1358,58 @@ Bản sửa chuẩn Executive:
               </button>
             </div>
 
-            <div className="p-5 flex flex-col gap-4 overflow-y-auto flex-1">
-              <div>
-                <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Dán nội dung từ vựng (hỗ trợ format có IPA /.../):</p>
-                <textarea
-                  value={addVocabText}
-                  onChange={(e) => { setAddVocabText(e.target.value); setParsedPreview(null); }}
-                  className="w-full min-h-[120px] bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm text-gray-800 resize-none outline-none focus:ring-2 focus:ring-blue-400 font-mono"
-                  placeholder={"Ví dụ:\n2. Tiếp thị & Thị trường\n16Persuade/pəˈsweɪd/Thuyết phụcPersuade customers..."}
-                />
-              </div>
-
-              <button onClick={handleParseVocab} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition shadow-md">
-                Phân tích & Xem trước
-              </button>
-
-              {parsedPreview !== null && (
-                <div className="animate-fade-in">
-                  {parsedPreview.length === 0 ? (
-                    <p className="text-center text-red-500 text-sm font-medium py-4">Không parse được từ nào. Kiểm tra format có đúng không ạ?</p>
-                  ) : (
-                    <>
-                      <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Xem trước ({parsedPreview.length} từ):</p>
-                      <div className="border border-gray-200 rounded-xl overflow-hidden max-h-52 overflow-y-auto">
-                        {parsedPreview.map((item, i) => (
-                          <div key={i} className="flex items-start gap-3 p-3 border-b border-gray-100 last:border-0 text-sm">
-                            <span className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">{i + 1}</span>
-                            <div>
-                              <span className="font-bold text-gray-900">{item.word}</span>
-                              <span className="text-blue-500 font-mono text-xs ml-2">{item.ipa}</span>
-                              <span className="text-gray-500 ml-2">— {item.vi}</span>
-                              {item.ex && <p className="text-gray-400 text-xs italic mt-0.5">"{item.ex}"</p>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <button onClick={handleConfirmAddVocab} className="w-full mt-3 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-sm transition shadow-md">
-                        Xác nhận thêm {parsedPreview.length} từ
-                      </button>
-                    </>
-                  )}
+            <div className="p-5 flex flex-col gap-3 overflow-y-auto flex-1">
+              {injectProgress ? (
+                <div className="animate-fade-in flex flex-col gap-2">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Đang xử lý...</p>
+                  {Object.values(injectProgress).filter(Boolean).map((line, i) => (
+                    <div key={i} className={`text-xs font-medium px-3 py-2 rounded-lg ${line.startsWith('✅') ? 'bg-green-50 text-green-700' : line.startsWith('❌') ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-500'}`}>{line}</div>
+                  ))}
                 </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Dán nội dung từ vựng (hỗ trợ nhiều format có IPA /.../):</p>
+                    <textarea
+                      value={addVocabText}
+                      onChange={(e) => { setAddVocabText(e.target.value); setParsedPreview(null); }}
+                      className="w-full min-h-[80px] bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm text-gray-800 resize-none outline-none focus:ring-2 focus:ring-blue-400 font-mono"
+                      placeholder={"Procurement /prəˈkjʊə.mənt/ (n) - Sự thu mua\nVí dụ: The IT procurement process takes two weeks.\n\n16Persuade/pəˈsweɪd/Thuyết phụcPersuade customers..."}
+                    />
+                  </div>
+
+                  <button onClick={handleParseVocab} className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition shadow-md">
+                    Phân tích & Xem trước
+                  </button>
+
+                  {parsedPreview !== null && (
+                    <div className="animate-fade-in">
+                      {parsedPreview.length === 0 ? (
+                        <p className="text-center text-red-500 text-sm font-medium py-3">Không parse được từ nào. Kiểm tra format có đúng không ạ?</p>
+                      ) : (
+                        <>
+                          <p className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Xem trước ({parsedPreview.length} từ):</p>
+                          <div className="border border-gray-200 rounded-xl overflow-hidden max-h-44 overflow-y-auto">
+                            {parsedPreview.map((item, i) => (
+                              <div key={i} className="flex items-start gap-2 p-2.5 border-b border-gray-100 last:border-0 text-sm">
+                                <span className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">{i + 1}</span>
+                                <div>
+                                  <span className="font-bold text-gray-900">{item.word}</span>
+                                  <span className="text-blue-500 font-mono text-xs ml-1.5">{item.ipa}</span>
+                                  <span className="text-gray-500 ml-1.5">— {item.vi}</span>
+                                  {item.ex && <p className="text-gray-400 text-xs italic mt-0.5">"{item.ex}"</p>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <button onClick={handleConfirmAddVocab} className="w-full mt-2 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl text-sm transition shadow-md">
+                            Xác nhận thêm {parsedPreview.length} từ → tất cả kỹ năng
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
