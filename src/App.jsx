@@ -414,7 +414,13 @@ export default function App() {
   const injectVocabIntoSkills = async (newItems) => {
     const wordsWithEx = newItems.filter(v => v.ex);
 
-    // Listen dictation (no AI)
+    // Save starting indices BEFORE adding, so we can navigate to new content
+    const listenStartIdx = allListeningData.length;
+    const readStartIdx = allReadingData.length;
+    const speakStartIdx = speakingData.length;
+    const writeStartIdx = writingData.length;
+
+    // Listen dictation (no AI needed)
     if (wordsWithEx.length > 0) {
       const newListening = wordsWithEx.map(item => ({
         text: item.ex,
@@ -424,69 +430,104 @@ export default function App() {
       const prev = JSON.parse(localStorage.getItem('extraListeningData') || '[]');
       localStorage.setItem('extraListeningData', JSON.stringify([...prev, ...newListening]));
       setAllListeningData(p => [...p, ...newListening]);
-      setInjectProgress(p => ({ ...p, listen: `✅ Nghe: +${newListening.length} câu` }));
+      setListenIdx(listenStartIdx);
+      setListenInput('');
+      setShowListenAnswer(false);
+      setInjectProgress(p => ({ ...p, listen: `✅ Nghe: +${newListening.length} câu mới` }));
     }
 
-    // Running playlist (no AI)
+    // Running playlist (no AI needed)
     if (wordsWithEx.length > 0) {
       const prevRun = JSON.parse(localStorage.getItem('extraRunningPlaylist') || '[]');
       const nextId = runningPlaylistBase.length + prevRun.length + 1;
       const newRunning = wordsWithEx.map((item, i) => ({ id: nextId + i, en: item.ex, vi: item.vi }));
       localStorage.setItem('extraRunningPlaylist', JSON.stringify([...prevRun, ...newRunning]));
       setAllRunningPlaylist(p => [...p, ...newRunning]);
-      setInjectProgress(p => ({ ...p, running: `✅ Chạy bộ: +${newRunning.length} câu` }));
+      setInjectProgress(p => ({ ...p, running: `✅ Chạy bộ: +${newRunning.length} câu mới` }));
     }
 
-    // Gemini calls in parallel
-    const wordList = newItems.map(v => `${v.word}: ${v.vi}`).join(', ');
+    // Gemini calls — simplified prompt (no strict schema to avoid API failures)
+    const wordList = newItems.map(v => `${v.word} (${v.vi})`).join(', ');
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
+    const geminiJSON = async (prompt) => {
+      const res = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: 'application/json' }
+        })
+      });
+      const data = await res.json();
+      if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        throw new Error(data.error?.message || 'No response from Gemini');
+      }
+      return JSON.parse(data.candidates[0].content.parts[0].text);
+    };
+
     const [readRes, speakRes, writeRes] = await Promise.allSettled([
-      fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: `Generate a business reading exercise using: ${wordList}. Return JSON.` }] }],
-        generationConfig: { responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { title: { type: 'STRING' }, content: { type: 'STRING' }, question: { type: 'STRING' }, options: { type: 'ARRAY', items: { type: 'STRING' } }, answerIdx: { type: 'INTEGER' }, explanation: { type: 'STRING' }, sampleSentence: { type: 'STRING' }, visualType: { type: 'STRING', enum: ['invoice','chartDown','dashboardAlert'] } }, required: ['title','content','question','options','answerIdx','explanation','sampleSentence','visualType'] } }
-      }) }).then(r => r.json()),
+      geminiJSON(`Create a Business English reading comprehension exercise that uses these vocabulary words: ${wordList}.
+Reply with ONLY valid JSON (no markdown, no code block):
+{"title":"short memo title","content":"3-4 sentence business memo using the vocab","question":"one comprehension question","options":["option A","option B","option C","option D"],"answerIdx":1,"explanation":"Vietnamese explanation why the answer is correct","sampleSentence":"one example sentence using key vocab","visualType":"dashboardAlert"}`),
 
-      fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: `Tạo 1 tình huống speaking Fintech/Business dùng các từ: ${wordList}. Trả về JSON.` }] }],
-        generationConfig: { responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { title: { type: 'STRING' }, context: { type: 'STRING' }, role: { type: 'STRING' }, visualType: { type: 'STRING', enum: ['videoCall','presentation'] } }, required: ['title','context','role','visualType'] } }
-      }) }).then(r => r.json()),
+      geminiJSON(`Tạo 1 tình huống giao tiếp tiếng Anh thương mại có dùng các từ vựng: ${wordList}.
+Chỉ trả về JSON hợp lệ (không markdown):
+{"title":"tên tình huống ngắn","context":"mô tả bối cảnh bằng tiếng Việt 1-2 câu","role":"nhiệm vụ của người học bằng tiếng Việt","visualType":"videoCall"}`),
 
-      fetch(geminiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: `Tạo 1 tình huống soạn email Fintech dùng các từ: ${wordList}. Trả về JSON.` }] }],
-        generationConfig: { responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { title: { type: 'STRING' }, context: { type: 'STRING' }, task: { type: 'STRING' }, visualType: { type: 'STRING', enum: ['invoice','chartDown','dashboardAlert'] } }, required: ['title','context','task','visualType'] } }
-      }) }).then(r => r.json()),
+      geminiJSON(`Tạo 1 tình huống soạn email tiếng Anh thương mại có dùng các từ vựng: ${wordList}.
+Chỉ trả về JSON hợp lệ (không markdown):
+{"title":"tên tình huống ngắn","context":"bối cảnh bằng tiếng Việt 1-2 câu","task":"nhiệm vụ viết email bằng tiếng Việt","visualType":"invoice"}`),
     ]);
 
-    if (readRes.status === 'fulfilled' && readRes.value.candidates?.length > 0) {
+    // Process reading
+    if (readRes.status === 'fulfilled') {
       try {
-        const newRead = JSON.parse(readRes.value.candidates[0].content.parts[0].text);
-        const prevRead = JSON.parse(localStorage.getItem('extraReadingData') || '[]');
-        localStorage.setItem('extraReadingData', JSON.stringify([...prevRead, newRead]));
-        setAllReadingData(p => [...p, newRead]);
-        setInjectProgress(p => ({ ...p, read: '✅ Đọc hiểu: Đã tạo' }));
-      } catch { setInjectProgress(p => ({ ...p, read: '❌ Đọc hiểu: Lỗi' })); }
-    } else { setInjectProgress(p => ({ ...p, read: '❌ Đọc hiểu: Lỗi API' })); }
+        const r = readRes.value;
+        if (!Array.isArray(r.options) || r.options.length < 2) r.options = ['Option A', 'Option B', 'Option C', 'Option D'];
+        if (typeof r.answerIdx !== 'number') r.answerIdx = 0;
+        const prev = JSON.parse(localStorage.getItem('extraReadingData') || '[]');
+        localStorage.setItem('extraReadingData', JSON.stringify([...prev, r]));
+        setAllReadingData(p => [...p, r]);
+        setReadIdx(readStartIdx);
+        setReadAnswered(null);
+        setInjectProgress(p => ({ ...p, read: '✅ Đọc hiểu: Đã tạo bài mới' }));
+      } catch (e) { setInjectProgress(p => ({ ...p, read: `❌ Đọc hiểu: parse lỗi — ${e.message}` })); }
+    } else {
+      setInjectProgress(p => ({ ...p, read: `❌ Đọc hiểu: ${readRes.reason?.message || 'Lỗi API'}` }));
+    }
 
-    if (speakRes.status === 'fulfilled' && speakRes.value.candidates?.length > 0) {
+    // Process speaking
+    if (speakRes.status === 'fulfilled') {
       try {
-        const newSpeak = JSON.parse(speakRes.value.candidates[0].content.parts[0].text);
-        const prevSpeak = JSON.parse(localStorage.getItem('extraSpeakingData') || '[]');
-        localStorage.setItem('extraSpeakingData', JSON.stringify([...prevSpeak, newSpeak]));
-        setSpeakingData(p => [...p, newSpeak]);
-        setInjectProgress(p => ({ ...p, speak: '✅ Nói: Đã tạo' }));
-      } catch { setInjectProgress(p => ({ ...p, speak: '❌ Nói: Lỗi' })); }
-    } else { setInjectProgress(p => ({ ...p, speak: '❌ Nói: Lỗi API' })); }
+        const r = speakRes.value;
+        const prev = JSON.parse(localStorage.getItem('extraSpeakingData') || '[]');
+        localStorage.setItem('extraSpeakingData', JSON.stringify([...prev, r]));
+        setSpeakingData(p => [...p, r]);
+        setSpeakIdx(speakStartIdx);
+        setSpeakTranscript('');
+        setSpeakFeedback(null);
+        setInjectProgress(p => ({ ...p, speak: '✅ Nói: Đã tạo tình huống mới' }));
+      } catch (e) { setInjectProgress(p => ({ ...p, speak: `❌ Nói: ${e.message}` })); }
+    } else {
+      setInjectProgress(p => ({ ...p, speak: `❌ Nói: ${speakRes.reason?.message || 'Lỗi API'}` }));
+    }
 
-    if (writeRes.status === 'fulfilled' && writeRes.value.candidates?.length > 0) {
+    // Process writing
+    if (writeRes.status === 'fulfilled') {
       try {
-        const newWrite = JSON.parse(writeRes.value.candidates[0].content.parts[0].text);
-        const prevWrite = JSON.parse(localStorage.getItem('extraWritingData') || '[]');
-        localStorage.setItem('extraWritingData', JSON.stringify([...prevWrite, newWrite]));
-        setWritingData(p => [...p, newWrite]);
-        setInjectProgress(p => ({ ...p, write: '✅ Viết: Đã tạo' }));
-      } catch { setInjectProgress(p => ({ ...p, write: '❌ Viết: Lỗi' })); }
-    } else { setInjectProgress(p => ({ ...p, write: '❌ Viết: Lỗi API' })); }
+        const r = writeRes.value;
+        const prev = JSON.parse(localStorage.getItem('extraWritingData') || '[]');
+        localStorage.setItem('extraWritingData', JSON.stringify([...prev, r]));
+        setWritingData(p => [...p, r]);
+        setWriteIdx(writeStartIdx);
+        setWriteInput('');
+        setWriteFeedback(null);
+        setInjectProgress(p => ({ ...p, write: '✅ Viết: Đã tạo tình huống mới' }));
+      } catch (e) { setInjectProgress(p => ({ ...p, write: `❌ Viết: ${e.message}` })); }
+    } else {
+      setInjectProgress(p => ({ ...p, write: `❌ Viết: ${writeRes.reason?.message || 'Lỗi API'}` }));
+    }
   };
 
   const handleConfirmAddVocab = async () => {
@@ -517,8 +558,7 @@ export default function App() {
     setAddVocabText('');
 
     if (newItems.length > 0) await injectVocabIntoSkills(newItems);
-
-    setTimeout(() => { setShowAddVocab(false); setInjectProgress(null); }, 1800);
+    // Modal stays open so user can read results — they close it manually
   };
 
   // ── Vocab state ──
@@ -1360,10 +1400,18 @@ Bản sửa chuẩn Executive:
             <div className="p-5 flex flex-col gap-3 overflow-y-auto flex-1">
               {injectProgress ? (
                 <div className="animate-fade-in flex flex-col gap-2">
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Đang xử lý...</p>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Kết quả cập nhật:</p>
                   {Object.values(injectProgress).filter(Boolean).map((line, i) => (
                     <div key={i} className={`text-xs font-medium px-3 py-2 rounded-lg ${line.startsWith('✅') ? 'bg-green-50 text-green-700' : line.startsWith('❌') ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-500'}`}>{line}</div>
                   ))}
+                  {Object.values(injectProgress).every(v => !v || !v.startsWith('⏳')) && (
+                    <button
+                      onClick={() => { setShowAddVocab(false); setInjectProgress(null); }}
+                      className="mt-2 w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition"
+                    >
+                      Đóng & Xem kết quả trong từng kỹ năng
+                    </button>
+                  )}
                 </div>
               ) : (
                 <>
