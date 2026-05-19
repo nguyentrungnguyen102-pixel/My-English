@@ -10067,6 +10067,158 @@ var vocabData = [
 		vi: "Sự đối soát",
 		ex: "Automated reconciliation saves time.",
 		hint: "Gợi ý: Quá trình kế toán dò lại 2 sổ sách xem dòng tiền có khớp nhau không."
+	},
+	{
+		cat: "Tài chính",
+		word: "Leverage",
+		ipa: "/ˈlev.ər.ɪdʒ/",
+		vi: "Đòn bẩy tài chính",
+		ex: "Use leverage wisely to maximize returns.",
+		hint: "Gợi ý: Dùng vốn vay để khuếch đại lợi nhuận — lợi khi thị trường tốt, rủi ro cao khi thị trường xấu."
+	},
+	{
+		cat: "Tài chính",
+		word: "Collateral",
+		ipa: "/kəˈlæt.ər.əl/",
+		vi: "Tài sản thế chấp",
+		ex: "The loan requires collateral of $500,000.",
+		hint: "Gợi ý: Tài sản anh đặt cọc khi vay — nếu không trả được nợ thì mất tài sản đó."
+	},
+	{
+		cat: "Tài chính",
+		word: "Volatility",
+		ipa: "/ˌvɒl.əˈtɪl.ɪ.ti/",
+		vi: "Tính biến động",
+		ex: "Market volatility increased after the announcement.",
+		hint: "Gợi ý: Chỉ mức độ giá dao động mạnh — thị trường crypto có volatility rất cao."
+	},
+	{
+		cat: "Thanh toán",
+		word: "Chargeback",
+		ipa: "/ˈtʃɑːdʒ.bæk/",
+		vi: "Hoàn tiền tranh chấp",
+		ex: "The chargeback rate exceeded 1% this month.",
+		hint: "Gợi ý: Khi khách hàng khiếu nại với ngân hàng để lấy lại tiền — nỗi ám ảnh của mọi merchant."
+	},
+	{
+		cat: "Thanh toán",
+		word: "Settlement",
+		ipa: "/ˈset.əl.mənt/",
+		vi: "Quyết toán",
+		ex: "The settlement cycle takes two business days.",
+		hint: "Gợi ý: Quá trình tiền thực sự được chuyển sau khi giao dịch được approved."
+	},
+	{
+		cat: "Vận hành",
+		word: "Throughput",
+		ipa: "/ˈθruː.pʊt/",
+		vi: "Công suất xử lý",
+		ex: "The system's throughput is 10,000 TPS.",
+		hint: "Gợi ý: Số lượng giao dịch/công việc hoàn thành trong một đơn vị thời gian."
+	},
+	{
+		cat: "Chiến lược",
+		word: "Scalable",
+		ipa: "/ˈskeɪ.lə.bəl/",
+		vi: "Có thể mở rộng quy mô",
+		ex: "We need a scalable architecture for growth.",
+		hint: "Gợi ý: Hệ thống có thể phục vụ 1000 hay 10 triệu user mà không cần thiết kế lại."
+	},
+	{
+		cat: "Chiến lược",
+		word: "Stakeholder",
+		ipa: "/ˈsteɪk.həʊl.dər/",
+		vi: "Bên liên quan",
+		ex: "All stakeholders must approve the roadmap.",
+		hint: "Gợi ý: Bất kỳ ai bị ảnh hưởng bởi dự án — từ CEO đến đối tác, nhân viên, nhà đầu tư."
+	},
+	{
+		cat: "Chiến lược",
+		word: "Milestone",
+		ipa: "/ˈmaɪl.stəʊn/",
+		vi: "Mốc quan trọng",
+		ex: "Reaching 1 million users is a key milestone.",
+		hint: "Gợi ý: Mốc đánh dấu tiến độ quan trọng trong dự án, thường gắn với deadline hoặc KPI."
+	},
+	{
+		cat: "Vận hành",
+		word: "Onboarding",
+		ipa: "/ˈɒn.bɔːr.dɪŋ/",
+		vi: "Tiếp nhận/Khởi động",
+		ex: "The merchant onboarding process takes 3 days.",
+		hint: "Gợi ý: Quá trình đưa merchant hoặc nhân viên mới vào hệ thống/công ty."
+	},
+	{
+		cat: "Vận hành",
+		word: "Procurement",
+		ipa: "/prəˈkjʊər.mənt/",
+		vi: "Thu mua",
+		ex: "The IT procurement process takes two weeks.",
+		hint: "Gợi ý: Toàn bộ quy trình mua sắm chính thức của doanh nghiệp — từ RFP đến ký hợp đồng."
+	},
+	{
+		cat: "Kỹ thuật",
+		word: "Deployment",
+		ipa: "/dɪˈplɔɪ.mənt/",
+		vi: "Triển khai",
+		ex: "The deployment was rolled back due to a bug.",
+		hint: "Gợi ý: Đưa code mới lên môi trường production — deploy xong mà app lỗi thì rollback."
+	},
+	{
+		cat: "Pháp lý",
+		word: "Mandate",
+		ipa: "/ˈmæn.deɪt/",
+		vi: "Ủy quyền/Nhiệm vụ bắt buộc",
+		ex: "The new regulation mandates KYC verification.",
+		hint: "Gợi ý: Quy định/lệnh bắt buộc phải thực hiện, thường từ cơ quan nhà nước hoặc cấp trên."
+	},
+	{
+		cat: "Tài chính",
+		word: "Liquidity",
+		ipa: "/lɪˈkwɪd.ɪ.ti/",
+		vi: "Tính thanh khoản",
+		ex: "The startup struggled with liquidity issues.",
+		hint: "Gợi ý: Khả năng chuyển tài sản thành tiền mặt nhanh chóng — tiền mặt có liquidity cao nhất."
+	},
+	{
+		cat: "Thị trường",
+		word: "Benchmark",
+		ipa: "/ˈbentʃ.mɑːk/",
+		vi: "Chuẩn so sánh",
+		ex: "Our NPS score exceeds the industry benchmark.",
+		hint: "Gợi ý: Tiêu chuẩn/mức tham chiếu để so sánh hiệu suất — như VN-Index là benchmark cho chứng khoán VN."
+	},
+	{
+		cat: "Chiến lược",
+		word: "Iterate",
+		ipa: "/ˈɪt.ər.eɪt/",
+		vi: "Cải tiến liên tục",
+		ex: "We iterate the product based on user feedback.",
+		hint: "Gợi ý: Liên tục cải thiện sản phẩm qua nhiều vòng lặp — phương pháp Agile dựa trên nguyên lý này."
+	},
+	{
+		cat: "Tài chính",
+		word: "Arbitrage",
+		ipa: "/ˈɑː.bɪ.trɑːʒ/",
+		vi: "Kinh doanh chênh lệch giá",
+		ex: "Traders exploit arbitrage opportunities between exchanges.",
+		hint: "Gợi ý: Mua rẻ ở nơi này, bán đắt ở nơi khác cùng lúc — khai thác chênh lệch giá không rủi ro."
+	},
+	{
+		cat: "Pháp lý",
+		word: "Due Diligence",
+		ipa: "/ˌdjuː ˈdɪl.ɪ.dʒəns/",
+		vi: "Thẩm định kỹ lưỡng",
+		ex: "Investors conduct due diligence before funding.",
+		hint: "Gợi ý: Điều tra toàn diện trước khi đầu tư/M&A — kiểm tra tài chính, pháp lý, vận hành."
+	},
+	{
+		cat: "Chiến lược",
+		word: "Traction",
+		ipa: "/ˈtræk.ʃən/",
+		vi: "Đà tăng trưởng",
+		ex: "The startup showed strong traction with 50k users.",
+		hint: "Gợi ý: Bằng chứng thực tế cho thấy sản phẩm đang được thị trường chấp nhận — số liệu, user, revenue."
 	}
 ];
 var runningPlaylistBase = [
@@ -10169,45 +10321,184 @@ var runningPlaylistBase = [
 		id: 20,
 		en: "A strong business strategy requires understanding both the competitive landscape and regulatory environment.",
 		vi: "Một chiến lược kinh doanh mạnh cần hiểu cả bối cảnh cạnh tranh lẫn môi trường pháp lý."
+	},
+	{
+		id: 21,
+		en: "High market volatility makes it difficult to set accurate revenue forecasts for the next quarter.",
+		vi: "Biến động thị trường cao khiến việc dự báo doanh thu chính xác cho quý tới trở nên khó khăn."
+	},
+	{
+		id: 22,
+		en: "We must use leverage wisely, ensuring our collateral covers at least twice the loan value.",
+		vi: "Chúng ta phải dùng đòn bẩy một cách khôn ngoan, đảm bảo tài sản thế chấp bao phủ ít nhất gấp đôi giá trị khoản vay."
+	},
+	{
+		id: 23,
+		en: "The chargeback rate is approaching the Visa threshold, so we need to tighten fraud detection immediately.",
+		vi: "Tỷ lệ hoàn tiền tranh chấp đang tiệm cận ngưỡng Visa, vì vậy chúng ta cần siết chặt phát hiện gian lận ngay lập tức."
+	},
+	{
+		id: 24,
+		en: "Our settlement cycle has been reduced from three days to same-day, improving merchant cash flow substantially.",
+		vi: "Chu kỳ quyết toán của chúng ta đã được rút ngắn từ ba ngày xuống còn trong ngày, cải thiện đáng kể dòng tiền cho merchant."
+	},
+	{
+		id: 25,
+		en: "Scalable infrastructure is critical for fintech companies that expect rapid user growth.",
+		vi: "Cơ sở hạ tầng có thể mở rộng rất quan trọng với các công ty fintech dự kiến tăng trưởng người dùng nhanh."
+	},
+	{
+		id: 26,
+		en: "All stakeholders must align on the product roadmap before we commit to the Q4 milestones.",
+		vi: "Tất cả các bên liên quan phải đồng thuận về lộ trình sản phẩm trước khi chúng ta cam kết các mốc Q4."
+	},
+	{
+		id: 27,
+		en: "Procurement costs can be reduced significantly by consolidating vendors and renegotiating contracts annually.",
+		vi: "Chi phí thu mua có thể giảm đáng kể bằng cách gộp nhà cung cấp và đàm phán lại hợp đồng hàng năm."
+	},
+	{
+		id: 28,
+		en: "The startup demonstrated strong traction with fifty thousand active users just three months after launch.",
+		vi: "Startup cho thấy đà tăng trưởng mạnh với 50 nghìn người dùng tích cực chỉ ba tháng sau khi ra mắt."
+	},
+	{
+		id: 29,
+		en: "Arbitrage opportunities between payment networks allow merchants to reduce transaction fees by up to forty percent.",
+		vi: "Cơ hội kinh doanh chênh lệch giá giữa các mạng thanh toán giúp merchant giảm phí giao dịch tới 40 phần trăm."
+	},
+	{
+		id: 30,
+		en: "Before closing the acquisition, the legal team conducted due diligence on all outstanding liabilities and compliance issues.",
+		vi: "Trước khi hoàn tất thâu tóm, đội pháp lý đã thẩm định kỹ lưỡng tất cả các khoản nợ tồn đọng và vấn đề tuân thủ."
 	}
 ];
-var initialWritingData = [{
-	title: "Merchant Discontent: Interchange Fee",
-	context: "Đối tác chuỗi rạp chiếu phim phàn nàn phí giao dịch qua cổng của bên mình quá cao (3.5%). P&L nội bộ lại báo cáo 'discrepancy' ở dòng tiền đối soát.",
-	task: "Viết email từ chối giảm phí, dùng hệ thống đối soát tự động làm vũ khí giữ chân.",
-	visualType: "invoice"
-}, {
-	title: "Revenue Deficit Notification",
-	context: "Báo cáo Q3 ghi nhận khoản 'Substantial Deficit' (Thâm hụt) do 'Overhead costs' của team Vận hành vượt ngân sách 30%.",
-	task: "Viết đoạn tóm tắt đề xuất cắt giảm chi phí (downsize) hoặc tối ưu quy trình (automation).",
-	visualType: "chartDown"
-}];
-var initialSpeakingData = [{
-	title: "SLA Renegotiation",
-	context: "Đối tác e-commerce bị sập gateway hôm qua do lỗi bên mình. Bạn đang họp online với họ.",
-	role: "Khách hàng đang rất tức giận. Bạn cần xoa dịu bằng lời nói và cam kết SLA uptime mới (99.99%).",
-	visualType: "videoCall"
-}, {
-	title: "Pitching New Payment Gateway",
-	context: "Trình bày với CFO về việc chuyển sang dùng cổng thanh toán mới rẻ hơn nhưng tích hợp khó hơn.",
-	role: "CFO sẽ hỏi khó về ROI và rủi ro downtime lúc chuyển đổi. Chuẩn bị bảo vệ ý tưởng.",
-	visualType: "presentation"
-}];
-var readingData = [{
-	title: "Memo: Spike in Chargeback Rates",
-	content: "Team, we've observed a substantial spike in chargeback requests over the last 72 hours, primarily originating from the newly onboarded gaming merchants. The discrepancy between approved transactions and settled amounts suggests a potential flaw in our anti-fraud intermediary layer. Please initiate a comprehensive reconciliation process immediately.",
-	question: "What is the main cause suspected for the chargeback spike?",
-	options: [
-		"A flaw in the reconciliation protocol.",
-		"A potential flaw in the anti-fraud intermediary layer.",
-		"High overhead costs from gaming merchants.",
-		"Network congestion."
-	],
-	answerIdx: 1,
-	explanation: "Dạ anh ơi, câu trả lời đúng là B nhé. Nếu anh để ý trong đoạn văn có câu: 'The discrepancy... suggests a potential flaw in our anti-fraud intermediary layer'. Câu này em tạm dịch là 'Sự sai lệch số liệu... cho thấy một lỗ hổng tiềm ẩn trong lớp trung gian chống gian lận'. Nó chỉ thẳng nguyên nhân gây ra chargeback (hoàn tiền) luôn đó anh.",
-	sampleSentence: "Our compliance team flagged a discrepancy in the anti-fraud intermediary layer, triggering an immediate reconciliation audit.",
-	visualType: "dashboardAlert"
-}];
+var initialWritingData = [
+	{
+		title: "Merchant Discontent: Interchange Fee",
+		context: "Đối tác chuỗi rạp chiếu phim phàn nàn phí giao dịch qua cổng của bên mình quá cao (3.5%). P&L nội bộ lại báo cáo 'discrepancy' ở dòng tiền đối soát.",
+		task: "Viết email từ chối giảm phí, dùng hệ thống đối soát tự động làm vũ khí giữ chân. Dùng các từ: discrepancy, reconciliation, compliance.",
+		visualType: "invoice"
+	},
+	{
+		title: "Revenue Deficit Notification",
+		context: "Báo cáo Q3 ghi nhận khoản 'Substantial Deficit' (Thâm hụt) do 'Overhead costs' của team Vận hành vượt ngân sách 30%.",
+		task: "Viết đoạn tóm tắt đề xuất cắt giảm chi phí hoặc tối ưu quy trình. Dùng: deficit, overhead, substantial, EBITDA.",
+		visualType: "chartDown"
+	},
+	{
+		title: "Chargeback Crisis Response",
+		context: "Tỷ lệ chargeback tháng này tăng đột biến lên 2.3%, vượt ngưỡng cho phép của Visa/Mastercard (1%). Nếu không xử lý, bên mình có thể bị đình chỉ tư cách merchant.",
+		task: "Viết email khẩn tới team Risk & Compliance trình bày kế hoạch xử lý trong 72 giờ. Dùng: chargeback, compliance, settlement, threshold.",
+		visualType: "dashboardAlert"
+	},
+	{
+		title: "Investor Due Diligence Request",
+		context: "Quỹ đầu tư Series B yêu cầu tài liệu thẩm định (due diligence) trước khi rót vốn. Họ muốn hiểu rõ về scalability, liquidity runway và compliance roadmap.",
+		task: "Viết email phản hồi xác nhận cung cấp đủ tài liệu, nêu rõ timeline. Dùng: due diligence, scalable, liquidity, milestone.",
+		visualType: "invoice"
+	},
+	{
+		title: "Procurement Policy Update",
+		context: "Ban lãnh đạo yêu cầu cập nhật quy trình procurement để tất cả hợp đồng trên $10,000 phải qua 3 bước phê duyệt, nhằm kiểm soát overhead costs.",
+		task: "Viết internal memo thông báo chính sách mới tới toàn bộ team. Dùng: procurement, overhead, stipulate, compliance, mandate.",
+		visualType: "chartDown"
+	}
+];
+var initialSpeakingData = [
+	{
+		title: "SLA Renegotiation",
+		context: "Đối tác e-commerce bị sập gateway hôm qua do lỗi bên mình. Bạn đang họp online với họ.",
+		role: "Khách hàng đang rất tức giận. Bạn cần xoa dịu và cam kết SLA uptime mới (99.99%). Dùng: compliance, stipulate, reconciliation.",
+		visualType: "videoCall"
+	},
+	{
+		title: "Pitching New Payment Gateway",
+		context: "Trình bày với CFO về việc chuyển sang dùng cổng thanh toán mới rẻ hơn nhưng tích hợp khó hơn.",
+		role: "CFO sẽ hỏi khó về ROI và rủi ro downtime lúc chuyển đổi. Dùng: EBITDA, overhead, scalable, leverage.",
+		visualType: "presentation"
+	},
+	{
+		title: "Explaining Chargeback to Merchant",
+		context: "Một merchant nhỏ không hiểu tại sao tiền bị giữ lại 30 ngày sau khi bán hàng. Họ đang gọi điện phàn nàn về settlement cycle.",
+		role: "Giải thích cho merchant hiểu về settlement, chargeback risk và tại sao cần holding period. Dùng: chargeback, settlement, compliance.",
+		visualType: "videoCall"
+	},
+	{
+		title: "Acquisition Proposal Pitch",
+		context: "Công ty đang xem xét mua lại (acquire) một startup fintech nhỏ có 50k user. Bạn đang thuyết phục Board rằng đây là cơ hội tốt.",
+		role: "Board sẽ hỏi về giá trị thực, due diligence và rủi ro tích hợp. Dùng: acquisition, due diligence, traction, scalable, milestone.",
+		visualType: "presentation"
+	},
+	{
+		title: "Liquidity Crisis Management",
+		context: "Công ty gặp vấn đề thanh khoản ngắn hạn sau khi một đối tác lớn trì hoãn thanh toán. CFO đang họp khẩn với team.",
+		role: "Trình bày phương án xử lý: vay ngắn hạn, cắt overhead, hoặc dùng leverage. Dùng: liquidity, overhead, collateral, deficit.",
+		visualType: "videoCall"
+	}
+];
+var readingData = [
+	{
+		title: "Memo: Spike in Chargeback Rates",
+		content: "Team, we've observed a substantial spike in chargeback requests over the last 72 hours, primarily originating from the newly onboarded gaming merchants. The discrepancy between approved transactions and settled amounts suggests a potential flaw in our anti-fraud intermediary layer. Please initiate a comprehensive reconciliation process immediately.",
+		question: "What is the main cause suspected for the chargeback spike?",
+		options: [
+			"A flaw in the reconciliation protocol.",
+			"A potential flaw in the anti-fraud intermediary layer.",
+			"High overhead costs from gaming merchants.",
+			"Network congestion during onboarding."
+		],
+		answerIdx: 1,
+		explanation: "Câu trả lời đúng là B. Đoạn văn nêu rõ: 'The discrepancy... suggests a potential flaw in our anti-fraud intermediary layer' — sự sai lệch số liệu chỉ ra lỗ hổng ở lớp trung gian chống gian lận, không phải ở quy trình đối soát hay chi phí overhead.",
+		sampleSentence: "Our compliance team flagged a discrepancy in the anti-fraud intermediary layer, triggering an immediate reconciliation audit.",
+		visualType: "dashboardAlert"
+	},
+	{
+		title: "Report: Q3 EBITDA Pressure",
+		content: "Our Q3 EBITDA margin declined substantially, falling from 28% to 19% quarter-on-quarter. The primary driver was a 34% surge in overhead costs following the aggressive regional expansion in Southeast Asia. The CFO has mandated a comprehensive procurement review and stipulated that all vendor contracts exceeding $50,000 must go through a three-level approval process to restore compliance with our cost governance framework.",
+		question: "What did the CFO mandate in response to the EBITDA decline?",
+		options: [
+			"Layoffs to reduce overhead costs immediately.",
+			"A procurement review and stricter contract approval process.",
+			"Cancellation of the Southeast Asia expansion.",
+			"An emergency acquisition to boost revenue."
+		],
+		answerIdx: 1,
+		explanation: "Câu trả lời đúng là B. CFO 'mandated a comprehensive procurement review and stipulated that all vendor contracts exceeding $50,000 must go through a three-level approval process' — yêu cầu rà soát thu mua và siết quy trình phê duyệt hợp đồng.",
+		sampleSentence: "The CFO stipulated a three-level approval mandate for all procurement contracts to restore EBITDA margins.",
+		visualType: "chartDown"
+	},
+	{
+		title: "Memo: Scalability Roadmap for Series B",
+		content: "To support our Series B fundraising, the engineering team has completed due diligence on our current infrastructure. Our payment processing throughput stands at 8,000 TPS with a scalable architecture that can reach 50,000 TPS with a 3x cost increase. Key milestones include launching collateral-backed lending by Q2 and achieving full regulatory compliance across 5 Southeast Asian markets by Q4.",
+		question: "What is the current transaction processing throughput?",
+		options: [
+			"50,000 TPS at full capacity.",
+			"8,000 TPS with room to scale.",
+			"3,000 TPS limited by compliance requirements.",
+			"The memo does not mention throughput."
+		],
+		answerIdx: 1,
+		explanation: "Câu trả lời đúng là B. Đoạn văn ghi rõ 'payment processing throughput stands at 8,000 TPS with a scalable architecture that can reach 50,000 TPS' — hiện tại 8,000 TPS, có thể scale lên 50,000.",
+		sampleSentence: "Our scalable architecture currently handles 8,000 TPS throughput and has clear milestones to reach 50,000 TPS before Series B closes.",
+		visualType: "dashboardAlert"
+	},
+	{
+		title: "Report: Chargeback & Settlement Cycle Audit",
+		content: "Following a regulatory mandate from the State Bank, we conducted a full audit of our chargeback and settlement processes. Our average settlement cycle is 2.1 business days, which is compliant with the T+2 requirement. However, our chargeback rate of 0.9% is approaching the 1% Visa threshold, primarily due to fluctuating fraud patterns from newly acquired merchants. The intermediary reconciliation layer has been flagged for an immediate upgrade to reduce discrepancies.",
+		question: "Why is the chargeback rate considered a concern in the report?",
+		options: [
+			"It already exceeds the Visa 1% threshold.",
+			"It is approaching the 1% Visa threshold due to fraud from new merchants.",
+			"The settlement cycle is too slow, causing chargebacks to accumulate.",
+			"The reconciliation layer generated false positives."
+		],
+		answerIdx: 1,
+		explanation: "Câu trả lời đúng là B. Báo cáo nêu 'chargeback rate of 0.9% is approaching the 1% Visa threshold, primarily due to fluctuating fraud patterns from newly acquired merchants' — tỷ lệ đang gần chạm ngưỡng, nguyên nhân từ merchant mới có fraud pattern bất thường.",
+		sampleSentence: "The fluctuating chargeback rate from newly acquired merchants is approaching the compliance threshold, requiring an immediate reconciliation audit.",
+		visualType: "invoice"
+	}
+];
 var IconZap = () => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
 	className: "w-6 h-6",
 	fill: "none",
@@ -10609,15 +10900,38 @@ var renderVisual = (type) => {
 		});
 	}
 };
-var listeningDataBase = [{
-	text: "The recent discrepancy in the settlement report requires immediate attention from the compliance team.",
-	hint: "Sự sai lệch gần đây trong báo cáo quyết toán cần sự chú ý ngay lập tức từ team tuân thủ.",
-	explanation: "Dạ anh, ở câu này có 3 từ khóa cực kỳ quan trọng anh cần lưu ý nhé:\n• Discrepancy (n): Sự sai lệch, không khớp số liệu.\n• Settlement report: Báo cáo quyết toán (nơi chốt dòng tiền).\n• Compliance team: Đội ngũ tuân thủ pháp lý."
-}, {
-	text: "Our overhead costs have fluctuated substantially during this quarter.",
-	hint: "Chi phí cố định của chúng ta đã dao động đáng kể trong quý này.",
-	explanation: "Anh nghe có chuẩn không ạ? Câu này anh chỉ cần nắm chắc 3 cụm này là ăn điểm giao tiếp nè:\n• Overhead costs: Chi phí cố định (mặt bằng, điện nước, vận hành...).\n• Fluctuate (v): Biến động, dao động lên xuống.\n• Substantially (adv): Một cách đáng kể, mức độ lớn."
-}];
+var listeningDataBase = [
+	{
+		text: "The recent discrepancy in the settlement report requires immediate attention from the compliance team.",
+		hint: "Sự sai lệch gần đây trong báo cáo quyết toán cần sự chú ý ngay lập tức từ team tuân thủ.",
+		explanation: "3 từ khóa quan trọng:\n• Discrepancy (n): Sự sai lệch, không khớp số liệu.\n• Settlement report: Báo cáo quyết toán (nơi chốt dòng tiền).\n• Compliance team: Đội ngũ tuân thủ pháp lý."
+	},
+	{
+		text: "Our overhead costs have fluctuated substantially during this quarter.",
+		hint: "Chi phí cố định của chúng ta đã dao động đáng kể trong quý này.",
+		explanation: "3 cụm quan trọng:\n• Overhead costs: Chi phí cố định (mặt bằng, điện nước, vận hành...).\n• Fluctuate (v): Biến động, dao động lên xuống.\n• Substantially (adv): Một cách đáng kể, mức độ lớn."
+	},
+	{
+		text: "The chargeback rate exceeded our threshold, triggering an immediate reconciliation audit.",
+		hint: "Tỷ lệ hoàn tiền tranh chấp vượt ngưỡng cho phép, kích hoạt kiểm toán đối soát khẩn cấp.",
+		explanation: "3 từ quan trọng:\n• Chargeback rate: Tỷ lệ hoàn tiền khi khách tranh chấp với ngân hàng.\n• Threshold: Ngưỡng giới hạn (Visa/Mastercard quy định tối đa 1%).\n• Reconciliation audit: Kiểm toán đối soát — xem xét lại toàn bộ giao dịch."
+	},
+	{
+		text: "We need a scalable architecture to handle throughput of fifty thousand transactions per second.",
+		hint: "Chúng ta cần kiến trúc có thể mở rộng để xử lý công suất 50,000 giao dịch mỗi giây.",
+		explanation: "Từ khóa kỹ thuật quan trọng:\n• Scalable architecture: Kiến trúc hệ thống có thể mở rộng khi nhu cầu tăng.\n• Throughput: Công suất xử lý — số giao dịch hoàn thành trong 1 giây (TPS).\n• Transactions per second (TPS): Đơn vị đo hiệu suất hệ thống thanh toán."
+	},
+	{
+		text: "The acquisition requires thorough due diligence on the target company's liquidity and compliance status.",
+		hint: "Việc thâu tóm yêu cầu thẩm định kỹ lưỡng về tình trạng thanh khoản và tuân thủ của công ty mục tiêu.",
+		explanation: "Từ khóa M&A quan trọng:\n• Acquisition: Thâu tóm, mua lại — chữ A trong M&A.\n• Due diligence: Thẩm định toàn diện trước khi đầu tư/mua lại.\n• Liquidity: Khả năng chuyển đổi tài sản thành tiền mặt nhanh chóng."
+	},
+	{
+		text: "Investors expect us to hit key milestones before the Series B funding round closes.",
+		hint: "Nhà đầu tư kỳ vọng chúng ta đạt được các mốc quan trọng trước khi vòng gọi vốn Series B kết thúc.",
+		explanation: "Startup/đầu tư từ vựng:\n• Milestone: Mốc quan trọng — mục tiêu cụ thể phải đạt (ví dụ: 1M users, break-even).\n• Series B: Vòng gọi vốn thứ 2 lớn, thường từ $10M–$50M.\n• Funding round: Vòng gọi vốn — Seed, Series A, B, C..."
+	}
+];
 var formatTime = (secs) => {
 	return `${String(Math.floor(secs / 60)).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
 };
