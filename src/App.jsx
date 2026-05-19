@@ -608,7 +608,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
   const handleQuizAnswer = (selected) => {
     if (quizAnswered) return;
     setQuizAnswered(selected);
-    if (selected === allVocab[cardIdx].word) {
+    if (selected === cur.word) {
       setQuizScore(prev => prev + 1);
     }
   };
@@ -621,7 +621,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
       if (saved !== null) {
         const extra = JSON.parse(localStorage.getItem('extraListeningData') || '[]');
         const max = listeningDataBase.length + extra.length - 1;
-        return Math.min(parseInt(saved), max);
+        const n = parseInt(saved, 10); return Math.min(isNaN(n) ? 0 : n, max);
       }
       const extra = JSON.parse(localStorage.getItem('extraListeningData') || '[]');
       return extra.length > 0 ? listeningDataBase.length + extra.length - 1 : 0;
@@ -721,7 +721,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
       if (saved !== null) {
         const extra = JSON.parse(localStorage.getItem('extraReadingData') || '[]');
         const max = readingData.length + extra.length - 1;
-        return Math.min(parseInt(saved), max);
+        const n = parseInt(saved, 10); return Math.min(isNaN(n) ? 0 : n, max);
       }
       const extra = JSON.parse(localStorage.getItem('extraReadingData') || '[]');
       return extra.length > 0 ? readingData.length + extra.length - 1 : 0;
@@ -736,7 +736,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
       if (saved !== null) {
         const extra = JSON.parse(localStorage.getItem('extraSpeakingData') || '[]');
         const max = initialSpeakingData.length + extra.length - 1;
-        return Math.min(parseInt(saved), max);
+        const n = parseInt(saved, 10); return Math.min(isNaN(n) ? 0 : n, max);
       }
       const extra = JSON.parse(localStorage.getItem('extraSpeakingData') || '[]');
       return extra.length > 0 ? initialSpeakingData.length + extra.length - 1 : 0;
@@ -850,7 +850,7 @@ Dạ anh, em Tiểu Nguyên đây. Về câu phản xạ của anh, em có vài 
       if (saved !== null) {
         const extra = JSON.parse(localStorage.getItem('extraWritingData') || '[]');
         const max = initialWritingData.length + extra.length - 1;
-        return Math.min(parseInt(saved), max);
+        const n = parseInt(saved, 10); return Math.min(isNaN(n) ? 0 : n, max);
       }
       const extra = JSON.parse(localStorage.getItem('extraWritingData') || '[]');
       return extra.length > 0 ? initialWritingData.length + extra.length - 1 : 0;
@@ -929,7 +929,10 @@ Bản sửa chuẩn Executive:
   };
 
   // ── Render: Vocab ──
-  const renderVocab = () => (
+  const renderVocab = () => {
+    const cur = allVocab[cardIdx];
+    if (!cur) return <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải từ vựng...</div>;
+    return (
     <div className="animate-fade-in flex flex-col items-center justify-center h-full w-full max-w-lg mx-auto py-2">
       <div className="flex justify-between items-center w-full mb-3 shrink-0">
         <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 flex-1 mr-3 shadow-sm">
@@ -950,26 +953,26 @@ Bản sửa chuẩn Executive:
         <div className="w-full flex-1 min-h-[180px] cursor-pointer" style={{ perspective: '1000px' }} onClick={() => setIsFlipped(!isFlipped)}>
           <div className="w-full h-full relative transition-transform duration-500" style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
             <div className="absolute inset-0 bg-white border border-gray-200 rounded-3xl flex flex-col items-center justify-center p-4 hover:border-blue-300 shadow-md transition-colors" style={{ backfaceVisibility: 'hidden' }}>
-              <span className="text-xs font-bold uppercase text-gray-500 mb-2 bg-gray-100 px-2 py-0.5 rounded-full">{allVocab[cardIdx].cat}</span>
-              <h3 className="text-2xl sm:text-3xl font-black text-gray-900 mb-1 text-center tracking-tight">{allVocab[cardIdx].word}</h3>
-              <p className="text-sm text-blue-500 font-mono mb-2">{allVocab[cardIdx].ipa}</p>
+              <span className="text-xs font-bold uppercase text-gray-500 mb-2 bg-gray-100 px-2 py-0.5 rounded-full">{cur.cat}</span>
+              <h3 className="text-2xl sm:text-3xl font-black text-gray-900 mb-1 text-center tracking-tight">{cur.word}</h3>
+              <p className="text-sm text-blue-500 font-mono mb-2">{cur.ipa}</p>
               <div className="absolute bottom-3 w-full px-4 flex justify-between items-center" onClick={(e) => e.stopPropagation()}>
                 <button onClick={() => setShowHint(!showHint)} className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-lg flex items-center gap-1 hover:bg-amber-100 transition border border-amber-100">
                   <IconLightbulb /> {showHint ? "Ẩn gợi ý" : "Xem gợi ý"}
                 </button>
-                <button onClick={() => playAudio(allVocab[cardIdx].word)} className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full transition-colors shadow-sm"><IconPlay /></button>
+                <button onClick={() => playAudio(cur.word)} className="p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full transition-colors shadow-sm"><IconPlay /></button>
               </div>
               {showHint && (
                 <div className="absolute bottom-12 w-full px-4 text-center animate-fade-in" onClick={(e) => e.stopPropagation()}>
-                  <p className="text-xs text-gray-600 bg-amber-50/50 p-2 rounded-xl border border-amber-100 italic font-medium">{allVocab[cardIdx].hint}</p>
+                  <p className="text-xs text-gray-600 bg-amber-50/50 p-2 rounded-xl border border-amber-100 italic font-medium">{cur.hint}</p>
                 </div>
               )}
             </div>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl flex flex-col items-center justify-center p-4 text-center shadow-lg" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-              <h3 className="text-xl font-bold text-white mb-3">{allVocab[cardIdx].vi}</h3>
+              <h3 className="text-xl font-bold text-white mb-3">{cur.vi}</h3>
               <div className="bg-white/10 backdrop-blur-sm p-3 rounded-2xl w-full text-left border border-white/20">
                 <p className="text-blue-200 text-[10px] font-bold uppercase mb-1 tracking-wider">Ví dụ</p>
-                <p className="text-white font-medium text-sm leading-relaxed">"{allVocab[cardIdx].ex}"</p>
+                <p className="text-white font-medium text-sm leading-relaxed">"{cur.ex}"</p>
               </div>
             </div>
           </div>
@@ -977,20 +980,20 @@ Bản sửa chuẩn Executive:
       ) : (
         <div className="w-full flex-1 flex flex-col bg-white border border-gray-200 rounded-3xl p-3 shadow-sm text-center overflow-y-auto min-h-0">
           <p className="text-gray-500 text-xs mb-1 font-medium shrink-0">Chọn từ tiếng Anh có nghĩa là:</p>
-          <h3 className="text-lg font-bold text-gray-900 mb-2 shrink-0">"{allVocab[cardIdx].vi}"</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-2 shrink-0">"{cur.vi}"</h3>
           <div className="grid grid-cols-1 gap-1.5 shrink-0">
             {quizOptions.map((opt, i) => {
               let btnStyle = "bg-gray-50 hover:bg-blue-50 text-gray-800 hover:text-blue-700 border-gray-200 hover:border-blue-300";
               if (quizAnswered) {
-                if (opt === allVocab[cardIdx].word) { btnStyle = "bg-green-100 border-green-500 text-green-800 shadow-sm font-bold"; }
+                if (opt === cur.word) { btnStyle = "bg-green-100 border-green-500 text-green-800 shadow-sm font-bold"; }
                 else if (opt === quizAnswered) { btnStyle = "bg-red-100 border-red-400 text-red-800 shadow-sm"; }
                 else { btnStyle = "bg-gray-50 border-gray-200 text-gray-400 opacity-50"; }
               }
               return (
                 <button key={i} disabled={quizAnswered !== null} onClick={() => handleQuizAnswer(opt)} className={`py-2 rounded-xl transition-all border shadow-sm flex items-center justify-between px-3 text-xs ${btnStyle}`}>
                   <span className="font-semibold">{opt}</span>
-                  {quizAnswered && opt === allVocab[cardIdx].word && <IconCheck />}
-                  {quizAnswered && opt === quizAnswered && opt !== allVocab[cardIdx].word && <IconX />}
+                  {quizAnswered && opt === cur.word && <IconCheck />}
+                  {quizAnswered && opt === quizAnswered && opt !== cur.word && <IconX />}
                 </button>
               );
             })}
@@ -1005,16 +1008,16 @@ Bản sửa chuẩn Executive:
                 <h4 className="text-blue-800 font-bold text-xs">Tiểu Nguyên giải thích:</h4>
               </div>
               <p className="text-gray-700 text-xs mb-1">
-                {quizAnswered === allVocab[cardIdx].word
+                {quizAnswered === cur.word
                   ? <span className="text-green-700 font-bold">Chính xác! </span>
                   : <span className="text-red-600 font-bold">Chưa đúng. </span>}
-                Từ đúng là <strong className="text-blue-700">{allVocab[cardIdx].word}</strong>
-                <span className="text-gray-500 ml-1.5 font-mono bg-white px-1 py-0.5 rounded border border-gray-200 text-[10px]">{allVocab[cardIdx].ipa}</span>
-                {' '}— <span className="text-gray-600">{allVocab[cardIdx].vi}</span>
+                Từ đúng là <strong className="text-blue-700">{cur.word}</strong>
+                <span className="text-gray-500 ml-1.5 font-mono bg-white px-1 py-0.5 rounded border border-gray-200 text-[10px]">{cur.ipa}</span>
+                {' '}— <span className="text-gray-600">{cur.vi}</span>
               </p>
               <div className="bg-white p-2 rounded-lg border border-blue-100 flex justify-between items-center mt-1.5">
-                <p className="text-gray-600 text-xs italic w-[85%]">"{allVocab[cardIdx].ex}"</p>
-                <button onClick={() => playAudio(allVocab[cardIdx].ex)} className="text-blue-500 hover:text-blue-700"><IconPlay /></button>
+                <p className="text-gray-600 text-xs italic w-[85%]">"{cur.ex}"</p>
+                <button onClick={() => playAudio(cur.ex)} className="text-blue-500 hover:text-blue-700"><IconPlay /></button>
               </div>
               <button onClick={() => setCardIdx((prev) => (prev + 1) % allVocab.length)} className="mt-2 w-full py-1.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white text-xs font-bold transition-colors shadow-md shadow-blue-500/30">
                 Làm câu tiếp theo
@@ -1031,10 +1034,14 @@ Bản sửa chuẩn Executive:
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   // ── Render: Listen ──
-  const renderListen = () => (
+  const renderListen = () => {
+    const curListen = allListeningData[listenIdx];
+    if (!curListen) return <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải bài nghe...</div>;
+    return (
     <div className="animate-fade-in flex flex-col h-full w-full max-w-3xl mx-auto py-2">
       <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2 shrink-0">
         <div className="p-1 bg-amber-100 text-amber-600 rounded-lg"><IconListen /></div> Luyện Nghe
@@ -1053,11 +1060,11 @@ Bản sửa chuẩn Executive:
         <>
           <div className="bg-white border border-gray-200 rounded-3xl p-4 shadow-sm mb-2 text-center relative overflow-hidden shrink-0">
             <div className="absolute top-0 left-0 w-full h-1 bg-amber-400"></div>
-            <button onClick={() => playAudio(allListeningData[listenIdx].text)} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-full p-3 inline-flex items-center justify-center transition-transform hover:scale-105 shadow-lg shadow-amber-500/30 mb-2">
+            <button onClick={() => playAudio(curListen.text)} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-full p-3 inline-flex items-center justify-center transition-transform hover:scale-105 shadow-lg shadow-amber-500/30 mb-2">
               <IconPlay />
             </button>
             <p className="text-gray-600 font-medium text-xs mb-1.5">Bấm Play, nghe câu nói của đối tác và gõ lại chính xác nội dung.</p>
-            <p className="text-[11px] text-gray-500 italic bg-amber-50 inline-block px-3 py-1.5 rounded-full border border-amber-100">Hint: {allListeningData[listenIdx].hint}</p>
+            <p className="text-[11px] text-gray-500 italic bg-amber-50 inline-block px-3 py-1.5 rounded-full border border-amber-100">Hint: {curListen.hint}</p>
           </div>
 
           <textarea
@@ -1071,9 +1078,9 @@ Bản sửa chuẩn Executive:
               <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
               <div className="flex justify-between items-center mb-1.5">
                 <p className="text-green-700 font-bold text-xs uppercase tracking-wide">Đáp án:</p>
-                <button onClick={() => playAudio(allListeningData[listenIdx].text)} className="text-green-700 hover:text-green-900"><IconPlay /></button>
+                <button onClick={() => playAudio(curListen.text)} className="text-green-700 hover:text-green-900"><IconPlay /></button>
               </div>
-              <p className="text-gray-900 text-sm font-medium mb-2">{allListeningData[listenIdx].text}</p>
+              <p className="text-gray-900 text-sm font-medium mb-2">{curListen.text}</p>
               <div className="bg-white rounded-xl p-2.5 border border-green-100 shadow-sm max-h-24 overflow-y-auto">
                 <div className="flex items-center gap-1.5 mb-1 border-b border-green-50 pb-1">
                   <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center shadow-sm border border-green-200">
@@ -1081,7 +1088,7 @@ Bản sửa chuẩn Executive:
                   </div>
                   <h4 className="text-green-800 font-bold text-xs">Góc phân tích:</h4>
                 </div>
-                <p className="text-gray-700 whitespace-pre-line text-xs leading-relaxed font-mono">{allListeningData[listenIdx].explanation}</p>
+                <p className="text-gray-700 whitespace-pre-line text-xs leading-relaxed font-mono">{curListen.explanation}</p>
               </div>
             </div>
           )}
@@ -1171,7 +1178,8 @@ Bản sửa chuẩn Executive:
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   // ── Render: Read ──
   const renderRead = () => {
