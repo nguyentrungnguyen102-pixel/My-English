@@ -466,18 +466,21 @@ export default function App() {
       return JSON.parse(data.candidates[0].content.parts[0].text);
     };
 
+    const vocabForPrompt = newItems.map(v => `"${v.word}" (${v.vi}${v.ex ? ` — ví dụ: ${v.ex}` : ''})`).join('; ');
+
     const [readRes, speakRes, writeRes] = await Promise.allSettled([
-      geminiJSON(`Create a Business English reading comprehension exercise that uses these vocabulary words: ${wordList}.
+      geminiJSON(`You are a Business English teacher. Create a reading comprehension exercise where the passage MUST naturally use these vocabulary words: ${vocabForPrompt}.
+The passage should be a realistic business memo/email (3-5 sentences) that incorporates the words above.
 Reply with ONLY valid JSON (no markdown, no code block):
-{"title":"short memo title","content":"3-4 sentence business memo using the vocab","question":"one comprehension question","options":["option A","option B","option C","option D"],"answerIdx":1,"explanation":"Vietnamese explanation why the answer is correct","sampleSentence":"one example sentence using key vocab","visualType":"dashboardAlert"}`),
+{"title":"memo title","content":"passage using the vocab words","question":"comprehension question about the passage","options":["A: ...","B: ...","C: ...","D: ..."],"answerIdx":1,"explanation":"Giải thích bằng tiếng Việt tại sao đáp án đúng, highlight từ vựng liên quan","sampleSentence":"1 câu ví dụ dùng từ vựng chính","visualType":"dashboardAlert"}`),
 
-      geminiJSON(`Tạo 1 tình huống giao tiếp tiếng Anh thương mại có dùng các từ vựng: ${wordList}.
-Chỉ trả về JSON hợp lệ (không markdown):
-{"title":"tên tình huống ngắn","context":"mô tả bối cảnh bằng tiếng Việt 1-2 câu","role":"nhiệm vụ của người học bằng tiếng Việt","visualType":"videoCall"}`),
+      geminiJSON(`Bạn là giáo viên tiếng Anh thương mại. Tạo 1 tình huống giao tiếp (role-play) yêu cầu người học PHẢI dùng các từ vựng sau trong câu trả lời: ${vocabForPrompt}.
+Chỉ trả về JSON hợp lệ (không markdown, không code block):
+{"title":"Tên tình huống (5-7 từ)","context":"Mô tả bối cảnh tình huống bằng tiếng Việt (2-3 câu), đề cập tới các từ vựng cần dùng","role":"Nhiệm vụ cụ thể của người học bằng tiếng Việt, yêu cầu dùng các từ vựng trên","visualType":"videoCall"}`),
 
-      geminiJSON(`Tạo 1 tình huống soạn email tiếng Anh thương mại có dùng các từ vựng: ${wordList}.
-Chỉ trả về JSON hợp lệ (không markdown):
-{"title":"tên tình huống ngắn","context":"bối cảnh bằng tiếng Việt 1-2 câu","task":"nhiệm vụ viết email bằng tiếng Việt","visualType":"invoice"}`),
+      geminiJSON(`Bạn là giáo viên tiếng Anh thương mại. Tạo 1 tình huống viết email yêu cầu người học PHẢI dùng các từ vựng sau trong email: ${vocabForPrompt}.
+Chỉ trả về JSON hợp lệ (không markdown, không code block):
+{"title":"Tên tình huống (5-7 từ)","context":"Mô tả bối cảnh bằng tiếng Việt (2-3 câu), đề cập từ vựng cần dùng","task":"Yêu cầu viết email cụ thể bằng tiếng Việt, nêu rõ phải dùng từ nào","visualType":"invoice"}`),
     ]);
 
     // Process reading
@@ -597,7 +600,18 @@ Chỉ trả về JSON hợp lệ (không markdown):
 
   // ── Listen state ──
   const [listenTabMode, setListenTabMode] = useState('dictation');
-  const [listenIdx, setListenIdx] = useState(0);
+  const [listenIdx, setListenIdx] = useState(() => {
+    try {
+      const saved = localStorage.getItem('lastListenIdx');
+      if (saved !== null) {
+        const extra = JSON.parse(localStorage.getItem('extraListeningData') || '[]');
+        const max = listeningDataBase.length + extra.length - 1;
+        return Math.min(parseInt(saved), max);
+      }
+      const extra = JSON.parse(localStorage.getItem('extraListeningData') || '[]');
+      return extra.length > 0 ? listeningDataBase.length + extra.length - 1 : 0;
+    } catch { return 0; }
+  });
   const [listenInput, setListenInput] = useState('');
   const [showListenAnswer, setShowListenAnswer] = useState(false);
 
@@ -671,9 +685,11 @@ Chỉ trả về JSON hợp lệ (không markdown):
     setRunFinished(false);
   };
 
-  useEffect(() => {
-    allRunningPlaylistRef.current = allRunningPlaylist;
-  }, [allRunningPlaylist]);
+  useEffect(() => { allRunningPlaylistRef.current = allRunningPlaylist; }, [allRunningPlaylist]);
+  useEffect(() => { localStorage.setItem('lastListenIdx', listenIdx); }, [listenIdx]);
+  useEffect(() => { localStorage.setItem('lastReadIdx', readIdx); }, [readIdx]);
+  useEffect(() => { localStorage.setItem('lastSpeakIdx', speakIdx); }, [speakIdx]);
+  useEffect(() => { localStorage.setItem('lastWriteIdx', writeIdx); }, [writeIdx]);
 
   useEffect(() => {
     return () => {
@@ -684,11 +700,33 @@ Chỉ trả về JSON hợp lệ (không markdown):
   }, []);
 
   // ── Read state ──
-  const [readIdx, setReadIdx] = useState(0);
+  const [readIdx, setReadIdx] = useState(() => {
+    try {
+      const saved = localStorage.getItem('lastReadIdx');
+      if (saved !== null) {
+        const extra = JSON.parse(localStorage.getItem('extraReadingData') || '[]');
+        const max = readingData.length + extra.length - 1;
+        return Math.min(parseInt(saved), max);
+      }
+      const extra = JSON.parse(localStorage.getItem('extraReadingData') || '[]');
+      return extra.length > 0 ? readingData.length + extra.length - 1 : 0;
+    } catch { return 0; }
+  });
   const [readAnswered, setReadAnswered] = useState(null);
 
   // ── Speak state ──
-  const [speakIdx, setSpeakIdx] = useState(0);
+  const [speakIdx, setSpeakIdx] = useState(() => {
+    try {
+      const saved = localStorage.getItem('lastSpeakIdx');
+      if (saved !== null) {
+        const extra = JSON.parse(localStorage.getItem('extraSpeakingData') || '[]');
+        const max = initialSpeakingData.length + extra.length - 1;
+        return Math.min(parseInt(saved), max);
+      }
+      const extra = JSON.parse(localStorage.getItem('extraSpeakingData') || '[]');
+      return extra.length > 0 ? initialSpeakingData.length + extra.length - 1 : 0;
+    } catch { return 0; }
+  });
   const [speakTranscript, setSpeakTranscript] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeakingGrading, setIsSpeakingGrading] = useState(false);
@@ -799,7 +837,18 @@ Dạ anh, em Tiểu Nguyên đây. Về câu phản xạ của anh, em có vài 
   };
 
   // ── Write state ──
-  const [writeIdx, setWriteIdx] = useState(0);
+  const [writeIdx, setWriteIdx] = useState(() => {
+    try {
+      const saved = localStorage.getItem('lastWriteIdx');
+      if (saved !== null) {
+        const extra = JSON.parse(localStorage.getItem('extraWritingData') || '[]');
+        const max = initialWritingData.length + extra.length - 1;
+        return Math.min(parseInt(saved), max);
+      }
+      const extra = JSON.parse(localStorage.getItem('extraWritingData') || '[]');
+      return extra.length > 0 ? initialWritingData.length + extra.length - 1 : 0;
+    } catch { return 0; }
+  });
   const [writeInput, setWriteInput] = useState('');
   const [isGrading, setIsGrading] = useState(false);
   const [writeFeedback, setWriteFeedback] = useState(null);
