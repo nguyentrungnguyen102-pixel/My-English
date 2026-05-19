@@ -700,9 +700,6 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
 
   useEffect(() => { allRunningPlaylistRef.current = allRunningPlaylist; }, [allRunningPlaylist]);
   useEffect(() => { localStorage.setItem('lastListenIdx', listenIdx); }, [listenIdx]);
-  useEffect(() => { localStorage.setItem('lastReadIdx', readIdx); }, [readIdx]);
-  useEffect(() => { localStorage.setItem('lastSpeakIdx', speakIdx); }, [speakIdx]);
-  useEffect(() => { localStorage.setItem('lastWriteIdx', writeIdx); }, [writeIdx]);
 
   useEffect(() => {
     return () => {
@@ -726,6 +723,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
     } catch { return 0; }
   });
   const [readAnswered, setReadAnswered] = useState(null);
+  useEffect(() => { localStorage.setItem('lastReadIdx', readIdx); }, [readIdx]);
 
   // ── Speak state ──
   const [speakIdx, setSpeakIdx] = useState(() => {
@@ -740,6 +738,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
       return extra.length > 0 ? initialSpeakingData.length + extra.length - 1 : 0;
     } catch { return 0; }
   });
+  useEffect(() => { localStorage.setItem('lastSpeakIdx', speakIdx); }, [speakIdx]);
   const [speakTranscript, setSpeakTranscript] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeakingGrading, setIsSpeakingGrading] = useState(false);
@@ -854,6 +853,7 @@ Dạ anh, em Tiểu Nguyên đây. Về câu phản xạ của anh, em có vài 
       return extra.length > 0 ? initialWritingData.length + extra.length - 1 : 0;
     } catch { return 0; }
   });
+  useEffect(() => { localStorage.setItem('lastWriteIdx', writeIdx); }, [writeIdx]);
   const [writeInput, setWriteInput] = useState('');
   const [isGrading, setIsGrading] = useState(false);
   const [writeFeedback, setWriteFeedback] = useState(null);
