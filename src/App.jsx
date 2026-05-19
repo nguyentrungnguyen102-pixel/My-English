@@ -2,6 +2,23 @@ import React, { useState, useRef, useEffect } from 'react';
 
 const apiKey = "AIzaSyAD_EXu68DfJadGU4XXsyeuV0nwFmqeCio";
 
+const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+async function geminiJSON(prompt) {
+  const res = await fetch(geminiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' }
+    })
+  });
+  const data = await res.json();
+  if (!data.candidates?.[0]?.content?.parts?.[0]?.text)
+    throw new Error(data.error?.message || 'No response from Gemini');
+  return JSON.parse(data.candidates[0].content.parts[0].text);
+}
+
 const vocabData = [
   { cat: "Tài chính", word: "Substantial", ipa: "/səbˈstæn.ʃəl/", vi: "Đáng kể", ex: "A substantial increase in P&L.", hint: "Gợi ý: Thường đi kèm với 'increase' hoặc 'decrease', chỉ sự thay đổi về lượng rất lớn." },
   { cat: "Tài chính", word: "Deficit", ipa: "/ˈdef.ɪ.sɪt/", vi: "Thâm hụt", ex: "The trade deficit reached a record high.", hint: "Gợi ý: Trái ngược với thặng dư (Surplus), tình trạng khi chi tiêu vượt quá mức thu nhập." },
@@ -461,26 +478,7 @@ export default function App() {
       setInjectProgress(p => ({ ...p, running: `✅ Chạy bộ: +${newRunning.length} câu mới` }));
     }
 
-    // Gemini calls — simplified prompt (no strict schema to avoid API failures)
-    const wordList = newItems.map(v => `${v.word} (${v.vi})`).join(', ');
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-    const geminiJSON = async (prompt) => {
-      const res = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json' }
-        })
-      });
-      const data = await res.json();
-      if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        throw new Error(data.error?.message || 'No response from Gemini');
-      }
-      return JSON.parse(data.candidates[0].content.parts[0].text);
-    };
-
+    // Gemini calls — geminiJSON and geminiUrl are module-level to avoid rolldown TDZ bug
     const vocabForPrompt = newItems.map(v => `"${v.word}" (${v.vi}${v.ex ? ` — ví dụ: ${v.ex}` : ''})`).join('; ');
 
     const [readRes, speakRes, writeRes] = await Promise.allSettled([
