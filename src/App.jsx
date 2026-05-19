@@ -443,7 +443,7 @@ export default function App() {
     setParsedPreview(parsed);
   };
 
-  const injectVocabIntoSkills = async (newItems) => {
+  async function injectVocabIntoSkills(newItems) {
     const wordsWithEx = newItems.filter(v => v.ex);
 
     // Save starting indices BEFORE adding, so we can navigate to new content
@@ -544,9 +544,9 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
     } else {
       setInjectProgress(p => ({ ...p, write: `❌ Viết: ${writeRes.reason?.message || 'Lỗi API'}` }));
     }
-  };
+  }
 
-  const handleConfirmAddVocab = async () => {
+  async function handleConfirmAddVocab() {
     if (!parsedPreview || parsedPreview.length === 0) return;
     const existing = new Set(allVocab.map(v => v.word.toLowerCase()));
     const newItems = parsedPreview.filter(v => !existing.has(v.word.toLowerCase()));
@@ -575,7 +575,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
 
     if (newItems.length > 0) await injectVocabIntoSkills(newItems);
     // Modal stays open so user can read results — they close it manually
-  };
+  }
 
   // ── Vocab state ──
   const [vocabMode, setVocabMode] = useState('flashcard');
@@ -774,7 +774,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
     }
   };
 
-  const handleGradeSpeaking = async () => {
+  async function handleGradeSpeaking() {
     if (!speakTranscript.trim()) { showToast("Anh chưa thu âm!"); return; }
     setIsSpeakingGrading(true);
     setSpeakFeedback(null);
@@ -807,9 +807,9 @@ Dạ anh, em Tiểu Nguyên đây. Về câu phản xạ của anh, em có vài 
       setSpeakFeedback("Dạ hệ thống AI đang bảo trì, anh thông cảm nhé!");
     }
     setIsSpeakingGrading(false);
-  };
+  }
 
-  const handleGenerateSpeakingScenario = async () => {
+  async function handleGenerateSpeakingScenario() {
     setIsGeneratingNew(true);
     showToast("Tiểu Nguyên đang nghĩ tình huống giao tiếp mới...");
     try {
@@ -839,7 +839,7 @@ Dạ anh, em Tiểu Nguyên đây. Về câu phản xạ của anh, em có vài 
       showToast("Có lỗi kết nối AI, anh thử lại nhé.");
     }
     setIsGeneratingNew(false);
-  };
+  }
 
   // ── Write state ──
   const [writeIdx, setWriteIdx] = useState(() => {
@@ -858,7 +858,7 @@ Dạ anh, em Tiểu Nguyên đây. Về câu phản xạ của anh, em có vài 
   const [isGrading, setIsGrading] = useState(false);
   const [writeFeedback, setWriteFeedback] = useState(null);
 
-  const handleGradeWriting = async () => {
+  async function handleGradeWriting() {
     if (!writeInput.trim()) { showToast("Anh chưa nhập nội dung!"); return; }
     setIsGrading(true);
     setWriteFeedback(null);
@@ -892,9 +892,9 @@ Bản sửa chuẩn Executive:
       setWriteFeedback("Lỗi kết nối AI. Thử lại sau.");
     }
     setIsGrading(false);
-  };
+  }
 
-  const handleGenerateWritingScenario = async () => {
+  async function handleGenerateWritingScenario() {
     setIsGeneratingNew(true);
     showToast("Tiểu Nguyên đang nghĩ chủ đề Email mới...");
     try {
@@ -924,7 +924,7 @@ Bản sửa chuẩn Executive:
       showToast("Có lỗi kết nối AI, anh thử lại nhé.");
     }
     setIsGeneratingNew(false);
-  };
+  }
 
   // ── Render: Vocab ──
   const renderVocab = () => {
