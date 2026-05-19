@@ -608,7 +608,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
   const handleQuizAnswer = (selected) => {
     if (quizAnswered) return;
     setQuizAnswered(selected);
-    if (selected === cur.word) {
+    if (selected === allVocab[cardIdx].word) {
       setQuizScore(prev => prev + 1);
     }
   };
