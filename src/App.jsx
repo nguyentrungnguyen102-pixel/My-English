@@ -395,19 +395,19 @@ export default function App() {
   const [addVocabText, setAddVocabText] = useState('');
   const [parsedPreview, setParsedPreview] = useState(null);
 
-  const showToast = (msg) => {
+  function showToast(msg) {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 3000);
-  };
+  }
 
-  const handleRandomModule = () => {
+  function handleRandomModule() {
     const modules = ['vocab', 'listen', 'speak', 'read', 'write'];
     const random = modules[Math.floor(Math.random() * modules.length)];
     setActiveModule(random);
     showToast(`Đã chuyển sang ngẫu nhiên: ${random.toUpperCase()}`);
-  };
+  }
 
-  const playAudio = (text) => {
+  function playAudio(text) {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const msg = new SpeechSynthesisUtterance(text);
@@ -417,9 +417,9 @@ export default function App() {
     } else {
       showToast("Trình duyệt không hỗ trợ phát âm.");
     }
-  };
+  }
 
-  const formatAIResponse = (text) => {
+  function formatAIResponse(text) {
     return text.split('\n').map((line, i) => {
       const parts = line.split(/(\*\*.*?\*\*)/g);
       return (
@@ -433,15 +433,15 @@ export default function App() {
         </p>
       );
     });
-  };
+  }
 
-  const handleParseVocab = () => {
+  function handleParseVocab() {
     const parsed = parseVocabPaste(addVocabText);
     if (parsed.length === 0) {
       showToast("Không tìm thấy từ nào. Kiểm tra format có IPA /.../ không?");
     }
     setParsedPreview(parsed);
-  };
+  }
 
   async function injectVocabIntoSkills(newItems) {
     const wordsWithEx = newItems.filter(v => v.ex);
@@ -586,7 +586,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
   const [quizOptions, setQuizOptions] = useState([]);
   const [quizAnswered, setQuizAnswered] = useState(null);
 
-  const generateQuiz = () => {
+  function generateQuiz() {
     const currentWord = allVocab[cardIdx];
     let options = [currentWord.word];
     let attempts = 0;
@@ -597,19 +597,19 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
     }
     setQuizOptions(options.sort(() => Math.random() - 0.5));
     setQuizAnswered(null);
-  };
+  }
 
   useEffect(() => {
     if (activeModule === 'vocab' && vocabMode === 'quiz') generateQuiz();
   }, [cardIdx, activeModule, vocabMode]);
 
-  const handleQuizAnswer = (selected) => {
+  function handleQuizAnswer(selected) {
     if (quizAnswered) return;
     setQuizAnswered(selected);
     if (selected === allVocab[cardIdx].word) {
       setQuizScore(prev => prev + 1);
     }
-  };
+  }
 
   // ── Listen state ──
   const [listenTabMode, setListenTabMode] = useState('dictation');
@@ -637,7 +637,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
   const runSpeakTimeoutRef = useRef(null);
   const runIdxRef = useRef(0);
 
-  const speakAndAdvance = (idx) => {
+  function speakAndAdvance(idx) {
     const playlist = allRunningPlaylistRef.current;
     if (idx >= playlist.length) {
       setRunPlaying(false);
@@ -657,9 +657,9 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
       }, 5000);
     };
     window.speechSynthesis.speak(utterance);
-  };
+  }
 
-  const handleRunPlay = () => {
+  function handleRunPlay() {
     if (runFinished) {
       runIdxRef.current = 0;
       setRunIdx(0);
@@ -669,25 +669,25 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
     setRunPlaying(true);
     runTimerRef.current = setInterval(() => setRunSeconds(s => s + 1), 1000);
     speakAndAdvance(runIdxRef.current);
-  };
+  }
 
-  const handleRunPause = () => {
+  function handleRunPause() {
     setRunPlaying(false);
     window.speechSynthesis.cancel();
     clearTimeout(runSpeakTimeoutRef.current);
     clearInterval(runTimerRef.current);
-  };
+  }
 
-  const handleRunSkip = () => {
+  function handleRunSkip() {
     window.speechSynthesis.cancel();
     clearTimeout(runSpeakTimeoutRef.current);
     const next = runIdxRef.current + 1;
     runIdxRef.current = next;
     setRunIdx(next);
     if (runPlaying) speakAndAdvance(next);
-  };
+  }
 
-  const handleRunStop = () => {
+  function handleRunStop() {
     window.speechSynthesis.cancel();
     clearTimeout(runSpeakTimeoutRef.current);
     clearInterval(runTimerRef.current);
@@ -696,7 +696,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
     setRunIdx(0);
     setRunSeconds(0);
     setRunFinished(false);
-  };
+  }
 
   useEffect(() => { allRunningPlaylistRef.current = allRunningPlaylist; }, [allRunningPlaylist]);
   useEffect(() => { localStorage.setItem('lastListenIdx', listenIdx); }, [listenIdx]);
@@ -746,7 +746,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
   const [speakFeedback, setSpeakFeedback] = useState(null);
   const recognitionRef = useRef(null);
 
-  const toggleRecording = () => {
+  function toggleRecording() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       showToast("Trình duyệt không hỗ trợ Mic. Anh gõ tạm nhé!");
@@ -772,7 +772,7 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
       };
       recognitionRef.current.start();
     }
-  };
+  }
 
   async function handleGradeSpeaking() {
     if (!speakTranscript.trim()) { showToast("Anh chưa thu âm!"); return; }
@@ -927,7 +927,7 @@ Bản sửa chuẩn Executive:
   }
 
   // ── Render: Vocab ──
-  const renderVocab = () => {
+  function renderVocab() {
     if (!allVocab[cardIdx]) return <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải từ vựng...</div>;
     return (
     <div className="animate-fade-in flex flex-col items-center justify-center h-full w-full max-w-lg mx-auto py-2">
@@ -1032,10 +1032,10 @@ Bản sửa chuẩn Executive:
       )}
     </div>
     );
-  };
+  }
 
   // ── Render: Listen ──
-  const renderListen = () => {
+  function renderListen() {
     if (!allListeningData[listenIdx]) return <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải bài nghe...</div>;
     return (
     <div className="animate-fade-in flex flex-col h-full w-full max-w-3xl mx-auto py-2">
@@ -1175,10 +1175,10 @@ Bản sửa chuẩn Executive:
       )}
     </div>
     );
-  };
+  }
 
   // ── Render: Read ──
-  const renderRead = () => {
+  function renderRead() {
     if (!allReadingData[readIdx]) return <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải bài đọc...</div>;
     return (
     <div className="animate-fade-in flex flex-col h-full w-full max-w-4xl mx-auto py-2">
@@ -1247,10 +1247,10 @@ Bản sửa chuẩn Executive:
       </div>
     </div>
     );
-  };
+  }
 
   // ── Render: Speak ──
-  const renderSpeak = () => {
+  function renderSpeak() {
     if (!speakingData[speakIdx]) return <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải tình huống...</div>;
     return (
     <div className="animate-fade-in flex flex-col h-full w-full max-w-4xl mx-auto py-2">
@@ -1317,10 +1317,10 @@ Bản sửa chuẩn Executive:
       )}
     </div>
     );
-  };
+  }
 
   // ── Render: Write ──
-  const renderWrite = () => {
+  function renderWrite() {
     if (!writingData[writeIdx]) return <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải tình huống...</div>;
     return (
     <div className="animate-fade-in flex flex-col h-full w-full max-w-4xl mx-auto py-2">
@@ -1386,9 +1386,9 @@ Bản sửa chuẩn Executive:
       )}
     </div>
     );
-  };
+  }
 
-  const NavItem = ({ module, icon, label, activeColorClass }) => {
+  function NavItem({ module, icon, label, activeColorClass }) {
     const isActive = activeModule === module;
     return (
       <button
@@ -1399,7 +1399,7 @@ Bản sửa chuẩn Executive:
         <span className="text-[9px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-opacity absolute -bottom-4 whitespace-nowrap">{label}</span>
       </button>
     );
-  };
+  }
 
   return (
     <div className="h-screen w-full bg-[#f8f9fa] text-gray-800 font-sans flex overflow-hidden selection:bg-blue-200 selection:text-blue-900">
