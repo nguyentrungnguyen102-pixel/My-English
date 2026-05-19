@@ -815,35 +815,27 @@ Dạ anh, em Tiểu Nguyên đây. Về câu phản xạ của anh, em có vài 
     setIsGeneratingNew(true);
     showToast("Tiểu Nguyên đang nghĩ tình huống giao tiếp mới...");
     try {
-      const payload = {
-        contents: [{ role: "user", parts: [{ text: "Tạo 1 tình huống giao tiếp (speaking) tiếng Anh thương mại về mảng Fintech/Business (khác với những cái đã có). Trả về JSON." }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              title: { type: "STRING" },
-              context: { type: "STRING" },
-              role: { type: "STRING" },
-              visualType: { type: "STRING", enum: ["videoCall", "presentation"] }
-            },
-            required: ["title", "context", "role", "visualType"]
-          }
-        }
-      };
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: `Tạo 1 tình huống giao tiếp (speaking) tiếng Anh thương mại về mảng Fintech/Business (khác với những cái đã có). Chỉ trả về JSON hợp lệ (không markdown):
+{"title":"Tên tình huống (5-7 từ)","context":"Mô tả bối cảnh bằng tiếng Việt (2-3 câu)","role":"Nhiệm vụ người học bằng tiếng Việt","visualType":"videoCall"}` }] }],
+          generationConfig: { responseMimeType: "application/json" }
+        })
       });
       const result = await response.json();
-      if (result.candidates?.length > 0) {
+      if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
         const newScenario = JSON.parse(result.candidates[0].content.parts[0].text);
-        setSpeakingData(prev => [...prev, newScenario]);
+        const prev = JSON.parse(localStorage.getItem('extraSpeakingData') || '[]');
+        localStorage.setItem('extraSpeakingData', JSON.stringify([...prev, newScenario]));
+        setSpeakingData(p => [...p, newScenario]);
         setSpeakIdx(speakingData.length);
         setSpeakTranscript('');
         setSpeakFeedback(null);
         showToast("Đã tạo xong tình huống Giao Tiếp!");
+      } else {
+        showToast("Có lỗi kết nối AI, anh thử lại nhé.");
       }
     } catch {
       showToast("Có lỗi kết nối AI, anh thử lại nhé.");
@@ -908,35 +900,27 @@ Bản sửa chuẩn Executive:
     setIsGeneratingNew(true);
     showToast("Tiểu Nguyên đang nghĩ chủ đề Email mới...");
     try {
-      const payload = {
-        contents: [{ role: "user", parts: [{ text: "Tạo 1 tình huống yêu cầu soạn email tiếng Anh thương mại về mảng Fintech/Business (khác với những cái đã có). Trả về JSON." }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              title: { type: "STRING" },
-              context: { type: "STRING" },
-              task: { type: "STRING" },
-              visualType: { type: "STRING", enum: ["invoice", "chartDown", "dashboardAlert"] }
-            },
-            required: ["title", "context", "task", "visualType"]
-          }
-        }
-      };
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: `Tạo 1 tình huống yêu cầu soạn email tiếng Anh thương mại về mảng Fintech/Business (khác với những cái đã có). Chỉ trả về JSON hợp lệ (không markdown):
+{"title":"Tên tình huống (5-7 từ)","context":"Mô tả bối cảnh bằng tiếng Việt (2-3 câu)","task":"Yêu cầu viết email cụ thể bằng tiếng Việt","visualType":"invoice"}` }] }],
+          generationConfig: { responseMimeType: "application/json" }
+        })
       });
       const result = await response.json();
-      if (result.candidates?.length > 0) {
+      if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
         const newScenario = JSON.parse(result.candidates[0].content.parts[0].text);
-        setWritingData(prev => [...prev, newScenario]);
+        const prev = JSON.parse(localStorage.getItem('extraWritingData') || '[]');
+        localStorage.setItem('extraWritingData', JSON.stringify([...prev, newScenario]));
+        setWritingData(p => [...p, newScenario]);
         setWriteIdx(writingData.length);
         setWriteInput('');
         setWriteFeedback(null);
         showToast("Đã tạo xong tình huống Viết Email!");
+      } else {
+        showToast("Có lỗi kết nối AI, anh thử lại nhé.");
       }
     } catch {
       showToast("Có lỗi kết nối AI, anh thử lại nhé.");
