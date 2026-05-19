@@ -324,13 +324,15 @@ export default function App() {
   const [writingData, setWritingData] = useState(() => {
     try {
       const extra = JSON.parse(localStorage.getItem('extraWritingData') || '[]');
-      return [...initialWritingData, ...extra];
+      const safe = extra.filter(r => r && typeof r.title === 'string' && typeof r.context === 'string' && typeof r.task === 'string');
+      return [...initialWritingData, ...safe];
     } catch { return [...initialWritingData]; }
   });
   const [speakingData, setSpeakingData] = useState(() => {
     try {
       const extra = JSON.parse(localStorage.getItem('extraSpeakingData') || '[]');
-      return [...initialSpeakingData, ...extra];
+      const safe = extra.filter(r => r && typeof r.title === 'string' && typeof r.context === 'string' && typeof r.role === 'string');
+      return [...initialSpeakingData, ...safe];
     } catch { return [...initialSpeakingData]; }
   });
   const [isGeneratingNew, setIsGeneratingNew] = useState(false);
@@ -338,21 +340,34 @@ export default function App() {
   const [allListeningData, setAllListeningData] = useState(() => {
     try {
       const extra = JSON.parse(localStorage.getItem('extraListeningData') || '[]');
-      return [...listeningDataBase, ...extra];
+      const safe = extra.filter(r => r && typeof r.text === 'string');
+      return [...listeningDataBase, ...safe];
     } catch { return [...listeningDataBase]; }
   });
 
   const [allRunningPlaylist, setAllRunningPlaylist] = useState(() => {
     try {
       const extra = JSON.parse(localStorage.getItem('extraRunningPlaylist') || '[]');
-      return [...runningPlaylistBase, ...extra];
+      const safe = extra.filter(r => r && typeof r.en === 'string');
+      return [...runningPlaylistBase, ...safe];
     } catch { return [...runningPlaylistBase]; }
   });
 
   const [allReadingData, setAllReadingData] = useState(() => {
     try {
       const extra = JSON.parse(localStorage.getItem('extraReadingData') || '[]');
-      return [...readingData, ...extra];
+      const safe = extra
+        .filter(r => r && typeof r.title === 'string' && typeof r.content === 'string')
+        .map(r => ({
+          ...r,
+          options: Array.isArray(r.options) && r.options.length >= 2 ? r.options : ['A', 'B', 'C', 'D'],
+          answerIdx: typeof r.answerIdx === 'number' ? r.answerIdx : 0,
+          explanation: r.explanation || '',
+          sampleSentence: r.sampleSentence || '',
+          question: r.question || 'What is the main topic?',
+          visualType: r.visualType || 'dashboardAlert',
+        }));
+      return [...readingData, ...safe];
     } catch { return [...readingData]; }
   });
 
@@ -1175,7 +1190,10 @@ Bản sửa chuẩn Executive:
   );
 
   // ── Render: Read ──
-  const renderRead = () => (
+  const renderRead = () => {
+    const cur = allReadingData[readIdx];
+    if (!cur) return <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải bài đọc...</div>;
+    return (
     <div className="animate-fade-in flex flex-col h-full w-full max-w-4xl mx-auto py-2">
       <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2 shrink-0">
         <div className="p-1 bg-indigo-100 text-indigo-600 rounded-lg"><IconRead /></div> Đọc Hiểu Văn Bản
@@ -1184,19 +1202,19 @@ Bản sửa chuẩn Executive:
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-2 shrink-0">
         <div className="lg:col-span-3 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-indigo-400"></div>
-          <h3 className="text-sm font-bold text-gray-900 mb-2 border-b border-gray-100 pb-1.5">{allReadingData[readIdx].title}</h3>
-          <p className="text-gray-700 leading-relaxed text-xs font-serif">{allReadingData[readIdx].content}</p>
+          <h3 className="text-sm font-bold text-gray-900 mb-2 border-b border-gray-100 pb-1.5">{cur.title}</h3>
+          <p className="text-gray-700 leading-relaxed text-xs font-serif">{cur.content}</p>
         </div>
         <div className="lg:col-span-2 hidden lg:block h-full">
-          {renderVisual(allReadingData[readIdx].visualType)}
+          {renderVisual(cur.visualType)}
         </div>
       </div>
 
       <div className="flex-1 bg-gray-50 border border-gray-200 rounded-3xl p-3 shadow-inner flex flex-col overflow-y-auto min-h-0">
-        <p className="font-bold text-gray-900 mb-2 text-xs shrink-0">{allReadingData[readIdx].question}</p>
+        <p className="font-bold text-gray-900 mb-2 text-xs shrink-0">{cur.question}</p>
         <div className="flex flex-col gap-2 shrink-0">
-          {allReadingData[readIdx].options.map((opt, i) => {
-            const isCorrect = i === allReadingData[readIdx].answerIdx;
+          {cur.options.map((opt, i) => {
+            const isCorrect = i === cur.answerIdx;
             const isSelected = readAnswered === i;
             let btnClass = "bg-white border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-200";
             let icon = null;
@@ -1222,15 +1240,15 @@ Bản sửa chuẩn Executive:
               </div>
               <h4 className="text-blue-800 font-bold text-sm">Tiểu Nguyên giải thích:</h4>
             </div>
-            <p className="text-gray-800 leading-relaxed mb-3 text-xs font-medium">{allReadingData[readIdx].explanation}</p>
+            <p className="text-gray-800 leading-relaxed mb-3 text-xs font-medium">{cur.explanation}</p>
 
-            {allReadingData[readIdx].sampleSentence && (
+            {cur.sampleSentence && (
               <div className="mt-2 bg-indigo-50 border-l-4 border-indigo-400 rounded-r-xl p-3 flex justify-between items-start gap-2">
                 <div>
                   <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide mb-1">Câu ví dụ thực chiến</p>
-                  <p className="text-sm italic text-indigo-800">"{allReadingData[readIdx].sampleSentence}"</p>
+                  <p className="text-sm italic text-indigo-800">"{cur.sampleSentence}"</p>
                 </div>
-                <button onClick={() => playAudio(allReadingData[readIdx].sampleSentence)} className="text-indigo-400 hover:text-indigo-700 shrink-0 mt-1"><IconPlay /></button>
+                <button onClick={() => playAudio(cur.sampleSentence)} className="text-indigo-400 hover:text-indigo-700 shrink-0 mt-1"><IconPlay /></button>
               </div>
             )}
 
@@ -1241,10 +1259,14 @@ Bản sửa chuẩn Executive:
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   // ── Render: Speak ──
-  const renderSpeak = () => (
+  const renderSpeak = () => {
+    const cur = speakingData[speakIdx];
+    if (!cur) return <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải tình huống...</div>;
+    return (
     <div className="animate-fade-in flex flex-col h-full w-full max-w-4xl mx-auto py-2">
       <div className="flex justify-between items-center mb-2 shrink-0">
         <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
@@ -1258,14 +1280,14 @@ Bản sửa chuẩn Executive:
       <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-2 shrink-0">
         <div className="md:col-span-3 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-center">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-rose-400"></div>
-          <h3 className="text-sm font-bold text-gray-900 mb-1.5">{speakingData[speakIdx].title}</h3>
-          <p className="text-gray-700 text-xs mb-2 leading-relaxed"><strong className="text-gray-900">Bối cảnh:</strong> {speakingData[speakIdx].context}</p>
+          <h3 className="text-sm font-bold text-gray-900 mb-1.5">{cur.title}</h3>
+          <p className="text-gray-700 text-xs mb-2 leading-relaxed"><strong className="text-gray-900">Bối cảnh:</strong> {cur.context}</p>
           <div className="bg-rose-50 border border-rose-100 rounded-xl p-2">
-            <p className="text-xs text-rose-800"><strong className="text-rose-600 block mb-0.5">Nhiệm vụ:</strong> {speakingData[speakIdx].role}</p>
+            <p className="text-xs text-rose-800"><strong className="text-rose-600 block mb-0.5">Nhiệm vụ:</strong> {cur.role}</p>
           </div>
         </div>
         <div className="md:col-span-2 hidden md:block h-full">
-          {renderVisual(speakingData[speakIdx].visualType)}
+          {renderVisual(cur.visualType)}
         </div>
       </div>
 
@@ -1308,10 +1330,14 @@ Bản sửa chuẩn Executive:
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   // ── Render: Write ──
-  const renderWrite = () => (
+  const renderWrite = () => {
+    const cur = writingData[writeIdx];
+    if (!cur) return <div className="flex items-center justify-center h-full text-gray-400 text-sm">Đang tải tình huống...</div>;
+    return (
     <div className="animate-fade-in flex flex-col h-full w-full max-w-4xl mx-auto py-2">
       <div className="flex justify-between items-center mb-2 shrink-0">
         <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
@@ -1330,12 +1356,12 @@ Bản sửa chuẩn Executive:
       <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-2 shrink-0">
         <div className="md:col-span-3 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-center">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-400"></div>
-          <h3 className="text-sm font-bold text-gray-900 mb-1.5">{writingData[writeIdx].title}</h3>
-          <p className="text-gray-700 text-xs mb-2 leading-relaxed"><strong className="text-gray-900">Bối cảnh:</strong> {writingData[writeIdx].context}</p>
-          <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-100 p-2 rounded-xl"><strong className="text-emerald-700 block mb-0.5">Nhiệm vụ:</strong> {writingData[writeIdx].task}</p>
+          <h3 className="text-sm font-bold text-gray-900 mb-1.5">{cur.title}</h3>
+          <p className="text-gray-700 text-xs mb-2 leading-relaxed"><strong className="text-gray-900">Bối cảnh:</strong> {cur.context}</p>
+          <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-100 p-2 rounded-xl"><strong className="text-emerald-700 block mb-0.5">Nhiệm vụ:</strong> {cur.task}</p>
         </div>
         <div className="md:col-span-2 hidden md:block h-full">
-          {renderVisual(writingData[writeIdx].visualType)}
+          {renderVisual(cur.visualType)}
         </div>
       </div>
 
@@ -1374,7 +1400,8 @@ Bản sửa chuẩn Executive:
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   const NavItem = ({ module, icon, label, activeColorClass }) => {
     const isActive = activeModule === module;
