@@ -13005,6 +13005,7 @@ function App() {
 		}
 	});
 	const [isGeneratingNew, setIsGeneratingNew] = (0, import_react.useState)(false);
+	const [hardcoreMode, setHardcoreMode] = (0, import_react.useState)(false);
 	const [allListeningData, setAllListeningData] = (0, import_react.useState)(() => {
 		try {
 			const safe = JSON.parse(localStorage.getItem("extraListeningData") || "[]").filter((r) => r && typeof r.text === "string");
@@ -13247,15 +13248,32 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
 	const [quizScore, setQuizScore] = (0, import_react.useState)(0);
 	const [quizOptions, setQuizOptions] = (0, import_react.useState)([]);
 	const [quizAnswered, setQuizAnswered] = (0, import_react.useState)(null);
+	const [quizTimer, setQuizTimer] = (0, import_react.useState)(null);
+	const quizTimerRef = (0, import_react.useRef)(null);
+	const [quizIsHardcore, setQuizIsHardcore] = (0, import_react.useState)(false);
 	function generateQuiz() {
-		let options = [allVocab[cardIdx].word];
-		let attempts = 0;
-		while (options.length < 4 && attempts < 50) {
-			const randomWord = allVocab[Math.floor(Math.random() * allVocab.length)].word;
-			if (!options.includes(randomWord)) options.push(randomWord);
-			attempts++;
+		const currentWord = allVocab[cardIdx];
+		const isHC = hardcoreMode;
+		setQuizIsHardcore(isHC);
+		if (isHC) {
+			let options = [currentWord.vi];
+			let attempts = 0;
+			while (options.length < 4 && attempts < 50) {
+				const rand = allVocab[Math.floor(Math.random() * allVocab.length)].vi;
+				if (!options.includes(rand)) options.push(rand);
+				attempts++;
+			}
+			setQuizOptions(options.sort(() => Math.random() - .5));
+		} else {
+			let options = [currentWord.word];
+			let attempts = 0;
+			while (options.length < 4 && attempts < 50) {
+				const randomWord = allVocab[Math.floor(Math.random() * allVocab.length)].word;
+				if (!options.includes(randomWord)) options.push(randomWord);
+				attempts++;
+			}
+			setQuizOptions(options.sort(() => Math.random() - .5));
 		}
-		setQuizOptions(options.sort(() => Math.random() - .5));
 		setQuizAnswered(null);
 	}
 	(0, import_react.useEffect)(() => {
@@ -13263,12 +13281,44 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
 	}, [
 		cardIdx,
 		activeModule,
-		vocabMode
+		vocabMode,
+		hardcoreMode
 	]);
+	(0, import_react.useEffect)(() => {
+		clearInterval(quizTimerRef.current);
+		if (!hardcoreMode || vocabMode !== "quiz" || activeModule !== "vocab") {
+			setQuizTimer(null);
+			return;
+		}
+		setQuizTimer(3);
+		quizTimerRef.current = setInterval(() => {
+			setQuizTimer((prev) => {
+				if (prev === null) return null;
+				if (prev <= 1) {
+					clearInterval(quizTimerRef.current);
+					return 0;
+				}
+				return prev - 1;
+			});
+		}, 1e3);
+		return () => clearInterval(quizTimerRef.current);
+	}, [
+		cardIdx,
+		vocabMode,
+		activeModule,
+		hardcoreMode
+	]);
+	(0, import_react.useEffect)(() => {
+		if (hardcoreMode && vocabMode === "quiz" && quizTimer === 0 && quizAnswered === null && quizOptions.length > 0) {
+			const correct = quizIsHardcore ? allVocab[cardIdx]?.vi : allVocab[cardIdx]?.word;
+			handleQuizAnswer(quizOptions.find((o) => o !== correct) || quizOptions[0]);
+		}
+	}, [quizTimer]);
 	function handleQuizAnswer(selected) {
 		if (quizAnswered) return;
 		setQuizAnswered(selected);
-		if (selected === allVocab[cardIdx].word) setQuizScore((prev) => prev + 1);
+		clearInterval(quizTimerRef.current);
+		if (selected === (quizIsHardcore ? allVocab[cardIdx].vi : allVocab[cardIdx].word)) setQuizScore((prev) => prev + 1);
 	}
 	const [listenTabMode, setListenTabMode] = (0, import_react.useState)("dictation");
 	const [listenIdx, setListenIdx] = (0, import_react.useState)(() => {
@@ -13288,6 +13338,64 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
 	});
 	const [listenInput, setListenInput] = (0, import_react.useState)("");
 	const [showListenAnswer, setShowListenAnswer] = (0, import_react.useState)(false);
+	const [shadowIdx, setShadowIdx] = (0, import_react.useState)(0);
+	const [shadowPlaying, setShadowPlaying] = (0, import_react.useState)(false);
+	const [shadowRecording, setShadowRecording] = (0, import_react.useState)(false);
+	const [shadowTranscript, setShadowTranscript] = (0, import_react.useState)("");
+	const [shadowScore, setShadowScore] = (0, import_react.useState)(null);
+	const shadowRecognitionRef = (0, import_react.useRef)(null);
+	const shadowTranscriptRef = (0, import_react.useRef)("");
+	function calcSimilarity(original, transcript) {
+		const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter(Boolean);
+		const origWords = normalize(original);
+		const transWords = normalize(transcript);
+		if (!origWords.length) return 0;
+		const transSet = new Set(transWords);
+		const matched = origWords.filter((w) => transSet.has(w)).length;
+		return Math.round(matched / origWords.length * 100);
+	}
+	function startShadowRecording() {
+		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+		if (!SpeechRecognition) {
+			showToast("Trình duyệt không hỗ trợ Mic!");
+			return;
+		}
+		setShadowRecording(true);
+		setShadowTranscript("");
+		setShadowScore(null);
+		shadowTranscriptRef.current = "";
+		const rec = new SpeechRecognition();
+		rec.lang = "en-US";
+		rec.interimResults = true;
+		rec.continuous = false;
+		rec.onresult = (e) => {
+			const t = Array.from(e.results).map((r) => r[0].transcript).join(" ");
+			shadowTranscriptRef.current = t;
+			setShadowTranscript(t);
+		};
+		rec.onend = () => {
+			setShadowRecording(false);
+			setShadowScore(calcSimilarity(allListeningData[shadowIdx].text, shadowTranscriptRef.current));
+		};
+		rec.onerror = () => setShadowRecording(false);
+		shadowRecognitionRef.current = rec;
+		rec.start();
+	}
+	function handleShadowPlay() {
+		window.speechSynthesis.cancel();
+		shadowRecognitionRef.current?.stop();
+		setShadowScore(null);
+		setShadowTranscript("");
+		setShadowPlaying(true);
+		const utterance = new SpeechSynthesisUtterance(allListeningData[shadowIdx].text);
+		utterance.rate = 1.2;
+		utterance.lang = "en-US";
+		utterance.onend = () => {
+			setShadowPlaying(false);
+			startShadowRecording();
+		};
+		window.speechSynthesis.speak(utterance);
+	}
 	const [runIdx, setRunIdx] = (0, import_react.useState)(0);
 	const [runPlaying, setRunPlaying] = (0, import_react.useState)(false);
 	const [runSeconds, setRunSeconds] = (0, import_react.useState)(0);
@@ -13405,6 +13513,9 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
 	const [isRecording, setIsRecording] = (0, import_react.useState)(false);
 	const [isSpeakingGrading, setIsSpeakingGrading] = (0, import_react.useState)(false);
 	const [speakFeedback, setSpeakFeedback] = (0, import_react.useState)(null);
+	const [survivalActive, setSurvivalActive] = (0, import_react.useState)(false);
+	const [survivalSeconds, setSurvivalSeconds] = (0, import_react.useState)(15);
+	const survivalTimerRef = (0, import_react.useRef)(null);
 	const recognitionRef = (0, import_react.useRef)(null);
 	function toggleRecording() {
 		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -13430,7 +13541,43 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
 			recognitionRef.current.start();
 		}
 	}
+	function startSurvivalMode() {
+		clearInterval(survivalTimerRef.current);
+		setSurvivalActive(true);
+		setSurvivalSeconds(15);
+		setSpeakFeedback(null);
+		setSpeakTranscript("");
+		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+		if (SpeechRecognition && !isRecording) {
+			recognitionRef.current?.stop();
+			const rec = new SpeechRecognition();
+			rec.lang = "en-US";
+			rec.interimResults = true;
+			rec.continuous = true;
+			rec.onstart = () => setIsRecording(true);
+			rec.onend = () => setIsRecording(false);
+			rec.onresult = (event) => {
+				setSpeakTranscript(Array.from(event.results).map((r) => r[0].transcript).join(""));
+			};
+			recognitionRef.current = rec;
+			rec.start();
+		}
+		let remaining = 15;
+		survivalTimerRef.current = setInterval(() => {
+			remaining--;
+			setSurvivalSeconds(remaining);
+			if (remaining <= 0) {
+				clearInterval(survivalTimerRef.current);
+				recognitionRef.current?.stop();
+				setIsRecording(false);
+				setSurvivalActive(false);
+				setSpeakFeedback("📵 *Bíp... Bíp... Tút—*\n\nAlo? Alo?? Mày còn đó không?! Tao chờ cả 15 giây mà không nghe mày nói được câu nào ra hồn. Gọi lại khi nào chuẩn bị xong đi. *CÚP MÁY*\n\n---\n💡 **Lần sau hãy:** Thở sâu → nói greeting ngay → đừng để im lặng quá 3 giây.");
+			}
+		}, 1e3);
+	}
 	async function handleGradeSpeaking() {
+		clearInterval(survivalTimerRef.current);
+		setSurvivalActive(false);
 		if (!speakTranscript.trim()) {
 			showToast("Anh chưa thu âm!");
 			return;
@@ -13682,7 +13829,7 @@ Bản sửa chuẩn Executive:
 							},
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
 								className: "text-xl font-bold text-white mb-3",
-								children: allVocab[cardIdx].vi
+								children: hardcoreMode ? "???  (Think in English!)" : allVocab[cardIdx].vi
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 								className: "bg-white/10 backdrop-blur-sm p-3 rounded-2xl w-full text-left border border-white/20",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
@@ -13700,25 +13847,46 @@ Bản sửa chuẩn Executive:
 						})]
 					})
 				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "w-full flex-1 flex flex-col bg-white border border-gray-200 rounded-3xl p-3 shadow-sm text-center overflow-y-auto min-h-0",
+					className: `w-full flex-1 flex flex-col bg-white border rounded-3xl p-3 shadow-sm text-center overflow-y-auto min-h-0 ${hardcoreMode && !quizAnswered ? "border-red-300" : "border-gray-200"}`,
 					children: [
+						hardcoreMode && !quizAnswered && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "shrink-0 mb-2 flex items-center justify-center gap-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: `w-10 h-10 rounded-full flex items-center justify-center font-black text-xl border-4 ${quizTimer <= 1 ? "border-red-500 text-red-600 animate-ping" : quizTimer <= 2 ? "border-orange-400 text-orange-500" : "border-amber-400 text-amber-500"}`,
+								children: quizTimer
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "text-xs font-bold text-red-500 uppercase tracking-wide",
+								children: "Giây còn lại!"
+							})]
+						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 							className: "text-gray-500 text-xs mb-1 font-medium shrink-0",
-							children: "Chọn từ tiếng Anh có nghĩa là:"
+							children: hardcoreMode ? "Từ này nghĩa là gì?" : "Chọn từ tiếng Anh có nghĩa là:"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
 							className: "text-lg font-bold text-gray-900 mb-2 shrink-0",
-							children: [
+							children: hardcoreMode && !quizAnswered ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+								className: "font-mono text-blue-600",
+								children: [
+									allVocab[cardIdx].word,
+									" ",
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "text-sm text-gray-400",
+										children: allVocab[cardIdx].ipa
+									})
+								]
+							}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
 								"\"",
 								allVocab[cardIdx].vi,
 								"\""
-							]
+							] })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "grid grid-cols-1 gap-1.5 shrink-0",
 							children: quizOptions.map((opt, i) => {
+								const correct = quizIsHardcore ? allVocab[cardIdx].vi : allVocab[cardIdx].word;
 								let btnStyle = "bg-gray-50 hover:bg-blue-50 text-gray-800 hover:text-blue-700 border-gray-200 hover:border-blue-300";
-								if (quizAnswered) if (opt === allVocab[cardIdx].word) btnStyle = "bg-green-100 border-green-500 text-green-800 shadow-sm font-bold";
+								if (quizAnswered) if (opt === correct) btnStyle = "bg-green-100 border-green-500 text-green-800 shadow-sm font-bold";
 								else if (opt === quizAnswered) btnStyle = "bg-red-100 border-red-400 text-red-800 shadow-sm";
 								else btnStyle = "bg-gray-50 border-gray-200 text-gray-400 opacity-50";
 								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
@@ -13730,8 +13898,8 @@ Bản sửa chuẩn Executive:
 											className: "font-semibold",
 											children: opt
 										}),
-										quizAnswered && opt === allVocab[cardIdx].word && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(IconCheck, {}),
-										quizAnswered && opt === quizAnswered && opt !== allVocab[cardIdx].word && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(IconX, {})
+										quizAnswered && opt === correct && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(IconCheck, {}),
+										quizAnswered && opt === quizAnswered && opt !== correct && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(IconX, {})
 									]
 								}, i);
 							})
@@ -13755,7 +13923,7 @@ Bản sửa chuẩn Executive:
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 									className: "text-gray-700 text-xs mb-1",
 									children: [
-										quizAnswered === allVocab[cardIdx].word ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										quizAnswered === (quizIsHardcore ? allVocab[cardIdx].vi : allVocab[cardIdx].word) ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 											className: "text-green-700 font-bold",
 											children: "Chính xác! "
 										}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
@@ -13843,15 +14011,29 @@ Bản sửa chuẩn Executive:
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "flex bg-gray-100 p-1 rounded-xl border border-gray-200 mb-2 shrink-0",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-						onClick: () => setListenTabMode("dictation"),
-						className: `flex-1 py-1.5 rounded-lg text-sm font-semibold transition-all ${listenTabMode === "dictation" ? "bg-white text-amber-600 shadow" : "text-gray-500 hover:text-gray-800"}`,
-						children: "Chép Chính Tả"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-						onClick: () => setListenTabMode("running"),
-						className: `flex-1 py-1.5 rounded-lg text-sm font-semibold transition-all ${listenTabMode === "running" ? "bg-white text-green-600 shadow" : "text-gray-500 hover:text-gray-800"}`,
-						children: "🏃 Chạy Bộ"
-					})]
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							onClick: () => setListenTabMode("dictation"),
+							className: `flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${listenTabMode === "dictation" ? "bg-white text-amber-600 shadow" : "text-gray-500 hover:text-gray-800"}`,
+							children: "Chép Chính Tả"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							onClick: () => setListenTabMode("running"),
+							className: `flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${listenTabMode === "running" ? "bg-white text-green-600 shadow" : "text-gray-500 hover:text-gray-800"}`,
+							children: "🏃 Chạy Bộ"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							onClick: () => {
+								setListenTabMode("shadow");
+								window.speechSynthesis.cancel();
+								shadowRecognitionRef.current?.stop();
+								setShadowScore(null);
+								setShadowTranscript("");
+							},
+							className: `flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${listenTabMode === "shadow" ? "bg-white text-purple-600 shadow" : "text-gray-500 hover:text-gray-800"}`,
+							children: "🎭 Shadowing"
+						})
+					]
 				}),
 				listenTabMode === "dictation" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pb-2",
@@ -14076,6 +14258,86 @@ Bản sửa chuẩn Executive:
 							})]
 						})
 					]
+				}),
+				listenTabMode === "shadow" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pb-2",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "bg-white border-2 border-purple-300 rounded-3xl p-4 shadow-sm shrink-0",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "text-[9px] font-bold text-purple-500 uppercase tracking-widest mb-1",
+									children: "Câu cần nhại — 1.2x speed"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "text-sm font-semibold text-gray-800 leading-relaxed mb-1",
+									children: allListeningData[shadowIdx].text
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "text-xs text-blue-600 italic border-t border-purple-100 pt-1.5",
+									children: allListeningData[shadowIdx].hint
+								})
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex gap-2 shrink-0",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								onClick: handleShadowPlay,
+								disabled: shadowPlaying || shadowRecording,
+								className: `flex-1 py-2.5 rounded-2xl text-white font-bold text-sm shadow-md transition-all ${shadowPlaying ? "bg-purple-400 animate-pulse" : shadowRecording ? "bg-gray-400" : "bg-purple-600 hover:bg-purple-700"}`,
+								children: shadowPlaying ? "🔊 AI đang đọc 1.2x..." : shadowRecording ? "🎙️ Đang ghi âm bạn..." : "▶ Nghe & Nhại lại"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								onClick: () => {
+									setShadowIdx((prev) => (prev + 1) % allListeningData.length);
+									setShadowScore(null);
+									setShadowTranscript("");
+									window.speechSynthesis.cancel();
+									shadowRecognitionRef.current?.stop();
+								},
+								className: "w-12 h-10 rounded-2xl bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-base",
+								children: "⏭"
+							})]
+						}),
+						(shadowTranscript || shadowRecording) && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: `rounded-2xl p-3 border shrink-0 ${shadowRecording ? "bg-red-50 border-red-200 animate-pulse" : "bg-gray-50 border-gray-200"}`,
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-[9px] font-bold uppercase tracking-widest mb-1 text-gray-400",
+								children: "Bạn nói:"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "text-sm text-gray-800 italic",
+								children: shadowTranscript || "..."
+							})]
+						}),
+						shadowScore !== null && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: `rounded-2xl p-4 border shrink-0 text-center ${shadowScore >= 80 ? "bg-green-50 border-green-300" : shadowScore >= 50 ? "bg-yellow-50 border-yellow-300" : "bg-red-50 border-red-300"}`,
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+									className: `text-3xl font-black mb-1 ${shadowScore >= 80 ? "text-green-600" : shadowScore >= 50 ? "text-yellow-600" : "text-red-600"}`,
+									children: [shadowScore, "%"]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "text-xs font-bold text-gray-500 mb-2",
+									children: shadowScore >= 80 ? "🔥 Xuất sắc! Ngữ điệu rất chuẩn!" : shadowScore >= 50 ? "💪 Khá rồi, luyện thêm nhé!" : "📚 Cần luyện nhiều hơn!"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "w-full bg-gray-200 rounded-full h-2 overflow-hidden",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: `h-2 rounded-full transition-all duration-700 ${shadowScore >= 80 ? "bg-green-500" : shadowScore >= 50 ? "bg-yellow-500" : "bg-red-500"}`,
+										style: { width: `${shadowScore}%` }
+									})
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "text-[10px] text-gray-400 mt-2",
+									children: "Dựa trên độ khớp từ với câu gốc"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									onClick: handleShadowPlay,
+									className: "mt-2 text-xs font-bold text-purple-600 hover:text-purple-800 underline",
+									children: "Thử lại"
+								})
+							]
+						})
+					]
 				})
 			]
 		});
@@ -14270,20 +14532,50 @@ Bản sửa chuẩn Executive:
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "bg-white rounded-3xl p-4 border border-gray-200 shadow-sm shrink-0",
+						className: `bg-white rounded-3xl p-4 border shadow-sm shrink-0 ${survivalActive ? "border-red-400 ring-2 ring-red-200" : "border-gray-200"}`,
 						children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 								className: "flex justify-between items-center mb-3",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "text-xs font-bold text-gray-500 uppercase tracking-wider",
-									children: "🎙️ Thu âm phản hồi"
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-									onClick: toggleRecording,
-									className: `flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-bold transition-all shadow-md ${isRecording ? "bg-red-500 animate-pulse" : "bg-gray-800 hover:bg-gray-900"}`,
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-center gap-2",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "text-xs font-bold text-gray-500 uppercase tracking-wider",
+										children: "🎙️ Thu âm phản hồi"
+									}), survivalActive && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+										className: `text-lg font-black ${survivalSeconds <= 5 ? "text-red-600 animate-pulse" : "text-orange-500"}`,
+										children: [
+											"⏱️ ",
+											survivalSeconds,
+											"s"
+										]
+									})]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex gap-2",
 									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(IconMicOutline, {}),
-										" ",
-										isRecording ? "Đang thu âm..." : "Bấm để Nói"
+										!survivalActive && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+											onClick: startSurvivalMode,
+											disabled: isRecording,
+											className: "flex items-center gap-1 px-3 py-1.5 rounded-full text-white text-xs font-bold bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 shadow-md transition-all",
+											children: "🔥 Sinh Tồn 15s"
+										}),
+										survivalActive && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+											onClick: () => {
+												clearInterval(survivalTimerRef.current);
+												setSurvivalActive(false);
+												recognitionRef.current?.stop();
+											},
+											className: "px-3 py-1.5 rounded-full text-white text-xs font-bold bg-gray-600 hover:bg-gray-700",
+											children: "Hủy"
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+											onClick: toggleRecording,
+											className: `flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-bold transition-all shadow-md ${isRecording ? "bg-red-500 animate-pulse" : "bg-gray-800 hover:bg-gray-900"}`,
+											children: [
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)(IconMicOutline, {}),
+												" ",
+												isRecording ? "Đang thu âm..." : "Bấm để Nói"
+											]
+										})
 									]
 								})]
 							}),
@@ -14300,6 +14592,8 @@ Bản sửa chuẩn Executive:
 										setSpeakIdx((prev) => (prev + 1) % speakingData.length);
 										setSpeakTranscript("");
 										setSpeakFeedback(null);
+										clearInterval(survivalTimerRef.current);
+										setSurvivalActive(false);
 									},
 									className: "text-xs font-semibold text-gray-500 hover:text-gray-800 px-3 py-1.5 border border-gray-200 rounded-lg",
 									children: "Đổi tình huống"
@@ -14573,10 +14867,10 @@ Bản sửa chuẩn Executive:
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
 						className: "text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-700 to-gray-900 tracking-tight hidden sm:block",
 						children: "FINTECH REFLEX"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "flex items-center gap-2",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-							className: "text-xs font-bold px-3 py-1 bg-gray-100 text-gray-500 rounded-full border border-gray-200",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "text-xs font-bold px-3 py-1 bg-gray-100 text-gray-500 rounded-full border border-gray-200 hidden sm:block",
 							children: [
 								activeModule === "vocab" && `Từ Vựng Doanh Nghiệp (${allVocab.length} từ)`,
 								activeModule === "listen" && "Luyện Nghe",
@@ -14584,7 +14878,11 @@ Bản sửa chuẩn Executive:
 								activeModule === "speak" && "Giao Tiếp Voice AI",
 								activeModule === "write" && "Soạn Email Thực Chiến"
 							]
-						})
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							onClick: () => setHardcoreMode((h) => !h),
+							className: `flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black transition-all border ${hardcoreMode ? "bg-red-500 text-white border-red-600 shadow-md shadow-red-500/30 animate-pulse" : "bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200"}`,
+							children: ["🔥 ", hardcoreMode ? "HARDCORE ON" : "Hardcore"]
+						})]
 					})]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "flex-1 p-4 md:p-6 overflow-hidden",
