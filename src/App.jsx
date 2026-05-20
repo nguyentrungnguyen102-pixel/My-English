@@ -2005,6 +2005,7 @@ export default function App() {
     } catch { return [...initialSpeakingData]; }
   });
   const [isGeneratingNew, setIsGeneratingNew] = useState(false);
+  const [hardcoreMode, setHardcoreMode] = useState(false);
 
   const [allListeningData, setAllListeningData] = useState(() => {
     try {
@@ -2237,30 +2238,71 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
   const [quizScore, setQuizScore] = useState(0);
   const [quizOptions, setQuizOptions] = useState([]);
   const [quizAnswered, setQuizAnswered] = useState(null);
+  const [quizTimer, setQuizTimer] = useState(null);
+  const quizTimerRef = useRef(null);
+  // In hardcore mode, options are Vietnamese meanings; correct answer is allVocab[cardIdx].vi
+  const [quizIsHardcore, setQuizIsHardcore] = useState(false);
 
   function generateQuiz() {
     const currentWord = allVocab[cardIdx];
-    let options = [currentWord.word];
-    let attempts = 0;
-    while (options.length < 4 && attempts < 50) {
-      const randomWord = allVocab[Math.floor(Math.random() * allVocab.length)].word;
-      if (!options.includes(randomWord)) options.push(randomWord);
-      attempts++;
+    const isHC = hardcoreMode;
+    setQuizIsHardcore(isHC);
+    if (isHC) {
+      // options = Vietnamese meanings, correct = currentWord.vi
+      let options = [currentWord.vi];
+      let attempts = 0;
+      while (options.length < 4 && attempts < 50) {
+        const rand = allVocab[Math.floor(Math.random() * allVocab.length)].vi;
+        if (!options.includes(rand)) options.push(rand);
+        attempts++;
+      }
+      setQuizOptions(options.sort(() => Math.random() - 0.5));
+    } else {
+      let options = [currentWord.word];
+      let attempts = 0;
+      while (options.length < 4 && attempts < 50) {
+        const randomWord = allVocab[Math.floor(Math.random() * allVocab.length)].word;
+        if (!options.includes(randomWord)) options.push(randomWord);
+        attempts++;
+      }
+      setQuizOptions(options.sort(() => Math.random() - 0.5));
     }
-    setQuizOptions(options.sort(() => Math.random() - 0.5));
     setQuizAnswered(null);
   }
 
   useEffect(() => {
     if (activeModule === 'vocab' && vocabMode === 'quiz') generateQuiz();
-  }, [cardIdx, activeModule, vocabMode]);
+  }, [cardIdx, activeModule, vocabMode, hardcoreMode]);
+
+  // Hardcore 3-second countdown for quiz
+  useEffect(() => {
+    clearInterval(quizTimerRef.current);
+    if (!hardcoreMode || vocabMode !== 'quiz' || activeModule !== 'vocab') { setQuizTimer(null); return; }
+    setQuizTimer(3);
+    quizTimerRef.current = setInterval(() => {
+      setQuizTimer(prev => {
+        if (prev === null) return null;
+        if (prev <= 1) { clearInterval(quizTimerRef.current); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(quizTimerRef.current);
+  }, [cardIdx, vocabMode, activeModule, hardcoreMode]);
+
+  useEffect(() => {
+    if (hardcoreMode && vocabMode === 'quiz' && quizTimer === 0 && quizAnswered === null && quizOptions.length > 0) {
+      const correct = quizIsHardcore ? allVocab[cardIdx]?.vi : allVocab[cardIdx]?.word;
+      const wrong = quizOptions.find(o => o !== correct) || quizOptions[0];
+      handleQuizAnswer(wrong);
+    }
+  }, [quizTimer]);
 
   function handleQuizAnswer(selected) {
     if (quizAnswered) return;
     setQuizAnswered(selected);
-    if (selected === allVocab[cardIdx].word) {
-      setQuizScore(prev => prev + 1);
-    }
+    clearInterval(quizTimerRef.current);
+    const correct = quizIsHardcore ? allVocab[cardIdx].vi : allVocab[cardIdx].word;
+    if (selected === correct) setQuizScore(prev => prev + 1);
   }
 
   // ── Listen state ──
@@ -2279,6 +2321,67 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
   });
   const [listenInput, setListenInput] = useState('');
   const [showListenAnswer, setShowListenAnswer] = useState(false);
+
+  // ── Shadowing Reflex state ──
+  const [shadowIdx, setShadowIdx] = useState(0);
+  const [shadowPlaying, setShadowPlaying] = useState(false);
+  const [shadowRecording, setShadowRecording] = useState(false);
+  const [shadowTranscript, setShadowTranscript] = useState('');
+  const [shadowScore, setShadowScore] = useState(null);
+  const shadowRecognitionRef = useRef(null);
+  const shadowTranscriptRef = useRef('');
+
+  function calcSimilarity(original, transcript) {
+    const normalize = s => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean);
+    const origWords = normalize(original);
+    const transWords = normalize(transcript);
+    if (!origWords.length) return 0;
+    const transSet = new Set(transWords);
+    const matched = origWords.filter(w => transSet.has(w)).length;
+    return Math.round((matched / origWords.length) * 100);
+  }
+
+  function startShadowRecording() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) { showToast('Trình duyệt không hỗ trợ Mic!'); return; }
+    setShadowRecording(true);
+    setShadowTranscript('');
+    setShadowScore(null);
+    shadowTranscriptRef.current = '';
+    const rec = new SpeechRecognition();
+    rec.lang = 'en-US';
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.onresult = (e) => {
+      const t = Array.from(e.results).map(r => r[0].transcript).join(' ');
+      shadowTranscriptRef.current = t;
+      setShadowTranscript(t);
+    };
+    rec.onend = () => {
+      setShadowRecording(false);
+      const score = calcSimilarity(allListeningData[shadowIdx].text, shadowTranscriptRef.current);
+      setShadowScore(score);
+    };
+    rec.onerror = () => setShadowRecording(false);
+    shadowRecognitionRef.current = rec;
+    rec.start();
+  }
+
+  function handleShadowPlay() {
+    window.speechSynthesis.cancel();
+    shadowRecognitionRef.current?.stop();
+    setShadowScore(null);
+    setShadowTranscript('');
+    setShadowPlaying(true);
+    const utterance = new SpeechSynthesisUtterance(allListeningData[shadowIdx].text);
+    utterance.rate = 1.2;
+    utterance.lang = 'en-US';
+    utterance.onend = () => {
+      setShadowPlaying(false);
+      startShadowRecording();
+    };
+    window.speechSynthesis.speak(utterance);
+  }
 
   // ── Running mode state ──
   const [runIdx, setRunIdx] = useState(0);
@@ -2395,6 +2498,9 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeakingGrading, setIsSpeakingGrading] = useState(false);
   const [speakFeedback, setSpeakFeedback] = useState(null);
+  const [survivalActive, setSurvivalActive] = useState(false);
+  const [survivalSeconds, setSurvivalSeconds] = useState(15);
+  const survivalTimerRef = useRef(null);
   const recognitionRef = useRef(null);
 
   function toggleRecording() {
@@ -2425,7 +2531,46 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
     }
   }
 
+  function startSurvivalMode() {
+    clearInterval(survivalTimerRef.current);
+    setSurvivalActive(true);
+    setSurvivalSeconds(15);
+    setSpeakFeedback(null);
+    setSpeakTranscript('');
+    // auto-start recording
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition && !isRecording) {
+      recognitionRef.current?.stop();
+      const rec = new SpeechRecognition();
+      rec.lang = 'en-US';
+      rec.interimResults = true;
+      rec.continuous = true;
+      rec.onstart = () => setIsRecording(true);
+      rec.onend = () => setIsRecording(false);
+      rec.onresult = (event) => {
+        const t = Array.from(event.results).map(r => r[0].transcript).join('');
+        setSpeakTranscript(t);
+      };
+      recognitionRef.current = rec;
+      rec.start();
+    }
+    let remaining = 15;
+    survivalTimerRef.current = setInterval(() => {
+      remaining--;
+      setSurvivalSeconds(remaining);
+      if (remaining <= 0) {
+        clearInterval(survivalTimerRef.current);
+        recognitionRef.current?.stop();
+        setIsRecording(false);
+        setSurvivalActive(false);
+        setSpeakFeedback("📵 *Bíp... Bíp... Tút—*\n\nAlo? Alo?? Mày còn đó không?! Tao chờ cả 15 giây mà không nghe mày nói được câu nào ra hồn. Gọi lại khi nào chuẩn bị xong đi. *CÚP MÁY*\n\n---\n💡 **Lần sau hãy:** Thở sâu → nói greeting ngay → đừng để im lặng quá 3 giây.");
+      }
+    }, 1000);
+  }
+
   async function handleGradeSpeaking() {
+    clearInterval(survivalTimerRef.current);
+    setSurvivalActive(false);
     if (!speakTranscript.trim()) { showToast("Anh chưa thu âm!"); return; }
     setIsSpeakingGrading(true);
     setSpeakFeedback(null);
@@ -2618,7 +2763,7 @@ Bản sửa chuẩn Executive:
               )}
             </div>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl flex flex-col items-center justify-center p-4 text-center shadow-lg" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-              <h3 className="text-xl font-bold text-white mb-3">{allVocab[cardIdx].vi}</h3>
+              <h3 className="text-xl font-bold text-white mb-3">{hardcoreMode ? '???  (Think in English!)' : allVocab[cardIdx].vi}</h3>
               <div className="bg-white/10 backdrop-blur-sm p-3 rounded-2xl w-full text-left border border-white/20">
                 <p className="text-blue-200 text-[10px] font-bold uppercase mb-1 tracking-wider">Ví dụ</p>
                 <p className="text-white font-medium text-sm leading-relaxed">"{allVocab[cardIdx].ex}"</p>
@@ -2627,22 +2772,37 @@ Bản sửa chuẩn Executive:
           </div>
         </div>
       ) : (
-        <div className="w-full flex-1 flex flex-col bg-white border border-gray-200 rounded-3xl p-3 shadow-sm text-center overflow-y-auto min-h-0">
-          <p className="text-gray-500 text-xs mb-1 font-medium shrink-0">Chọn từ tiếng Anh có nghĩa là:</p>
-          <h3 className="text-lg font-bold text-gray-900 mb-2 shrink-0">"{allVocab[cardIdx].vi}"</h3>
+        <div className={`w-full flex-1 flex flex-col bg-white border rounded-3xl p-3 shadow-sm text-center overflow-y-auto min-h-0 ${hardcoreMode && !quizAnswered ? 'border-red-300' : 'border-gray-200'}`}>
+          {hardcoreMode && !quizAnswered && (
+            <div className="shrink-0 mb-2 flex items-center justify-center gap-2">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xl border-4 ${quizTimer <= 1 ? 'border-red-500 text-red-600 animate-ping' : quizTimer <= 2 ? 'border-orange-400 text-orange-500' : 'border-amber-400 text-amber-500'}`}>
+                {quizTimer}
+              </div>
+              <span className="text-xs font-bold text-red-500 uppercase tracking-wide">Giây còn lại!</span>
+            </div>
+          )}
+          <p className="text-gray-500 text-xs mb-1 font-medium shrink-0">{hardcoreMode ? 'Từ này nghĩa là gì?' : 'Chọn từ tiếng Anh có nghĩa là:'}</p>
+          <h3 className="text-lg font-bold text-gray-900 mb-2 shrink-0">
+            {hardcoreMode && !quizAnswered ? (
+              <span className="font-mono text-blue-600">{allVocab[cardIdx].word} <span className="text-sm text-gray-400">{allVocab[cardIdx].ipa}</span></span>
+            ) : (
+              <span>"{allVocab[cardIdx].vi}"</span>
+            )}
+          </h3>
           <div className="grid grid-cols-1 gap-1.5 shrink-0">
             {quizOptions.map((opt, i) => {
+              const correct = quizIsHardcore ? allVocab[cardIdx].vi : allVocab[cardIdx].word;
               let btnStyle = "bg-gray-50 hover:bg-blue-50 text-gray-800 hover:text-blue-700 border-gray-200 hover:border-blue-300";
               if (quizAnswered) {
-                if (opt === allVocab[cardIdx].word) { btnStyle = "bg-green-100 border-green-500 text-green-800 shadow-sm font-bold"; }
+                if (opt === correct) { btnStyle = "bg-green-100 border-green-500 text-green-800 shadow-sm font-bold"; }
                 else if (opt === quizAnswered) { btnStyle = "bg-red-100 border-red-400 text-red-800 shadow-sm"; }
                 else { btnStyle = "bg-gray-50 border-gray-200 text-gray-400 opacity-50"; }
               }
               return (
                 <button key={i} disabled={quizAnswered !== null} onClick={() => handleQuizAnswer(opt)} className={`py-2 rounded-xl transition-all border shadow-sm flex items-center justify-between px-3 text-xs ${btnStyle}`}>
                   <span className="font-semibold">{opt}</span>
-                  {quizAnswered && opt === allVocab[cardIdx].word && <IconCheck />}
-                  {quizAnswered && opt === quizAnswered && opt !== allVocab[cardIdx].word && <IconX />}
+                  {quizAnswered && opt === correct && <IconCheck />}
+                  {quizAnswered && opt === quizAnswered && opt !== correct && <IconX />}
                 </button>
               );
             })}
@@ -2657,7 +2817,7 @@ Bản sửa chuẩn Executive:
                 <h4 className="text-blue-800 font-bold text-xs">Tiểu Nguyên giải thích:</h4>
               </div>
               <p className="text-gray-700 text-xs mb-1">
-                {quizAnswered === allVocab[cardIdx].word
+                {quizAnswered === (quizIsHardcore ? allVocab[cardIdx].vi : allVocab[cardIdx].word)
                   ? <span className="text-green-700 font-bold">Chính xác! </span>
                   : <span className="text-red-600 font-bold">Chưa đúng. </span>}
                 Từ đúng là <strong className="text-blue-700">{allVocab[cardIdx].word}</strong>
@@ -2696,11 +2856,14 @@ Bản sửa chuẩn Executive:
       </h2>
 
       <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 mb-2 shrink-0">
-        <button onClick={() => setListenTabMode('dictation')} className={`flex-1 py-1.5 rounded-lg text-sm font-semibold transition-all ${listenTabMode === 'dictation' ? 'bg-white text-amber-600 shadow' : 'text-gray-500 hover:text-gray-800'}`}>
+        <button onClick={() => setListenTabMode('dictation')} className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${listenTabMode === 'dictation' ? 'bg-white text-amber-600 shadow' : 'text-gray-500 hover:text-gray-800'}`}>
           Chép Chính Tả
         </button>
-        <button onClick={() => setListenTabMode('running')} className={`flex-1 py-1.5 rounded-lg text-sm font-semibold transition-all ${listenTabMode === 'running' ? 'bg-white text-green-600 shadow' : 'text-gray-500 hover:text-gray-800'}`}>
+        <button onClick={() => setListenTabMode('running')} className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${listenTabMode === 'running' ? 'bg-white text-green-600 shadow' : 'text-gray-500 hover:text-gray-800'}`}>
           🏃 Chạy Bộ
+        </button>
+        <button onClick={() => { setListenTabMode('shadow'); window.speechSynthesis.cancel(); shadowRecognitionRef.current?.stop(); setShadowScore(null); setShadowTranscript(''); }} className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${listenTabMode === 'shadow' ? 'bg-white text-purple-600 shadow' : 'text-gray-500 hover:text-gray-800'}`}>
+          🎭 Shadowing
         </button>
       </div>
 
@@ -2827,6 +2990,49 @@ Bản sửa chuẩn Executive:
           </details>
         </div>
       )}
+
+      {listenTabMode === 'shadow' && (
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pb-2">
+          <div className="bg-white border-2 border-purple-300 rounded-3xl p-4 shadow-sm shrink-0">
+            <p className="text-[9px] font-bold text-purple-500 uppercase tracking-widest mb-1">Câu cần nhại — 1.2x speed</p>
+            <p className="text-sm font-semibold text-gray-800 leading-relaxed mb-1">{allListeningData[shadowIdx].text}</p>
+            <p className="text-xs text-blue-600 italic border-t border-purple-100 pt-1.5">{allListeningData[shadowIdx].hint}</p>
+          </div>
+
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={handleShadowPlay}
+              disabled={shadowPlaying || shadowRecording}
+              className={`flex-1 py-2.5 rounded-2xl text-white font-bold text-sm shadow-md transition-all ${shadowPlaying ? 'bg-purple-400 animate-pulse' : shadowRecording ? 'bg-gray-400' : 'bg-purple-600 hover:bg-purple-700'}`}
+            >
+              {shadowPlaying ? '🔊 AI đang đọc 1.2x...' : shadowRecording ? '🎙️ Đang ghi âm bạn...' : '▶ Nghe & Nhại lại'}
+            </button>
+            <button
+              onClick={() => { setShadowIdx(prev => (prev + 1) % allListeningData.length); setShadowScore(null); setShadowTranscript(''); window.speechSynthesis.cancel(); shadowRecognitionRef.current?.stop(); }}
+              className="w-12 h-10 rounded-2xl bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-base"
+            >⏭</button>
+          </div>
+
+          {(shadowTranscript || shadowRecording) && (
+            <div className={`rounded-2xl p-3 border shrink-0 ${shadowRecording ? 'bg-red-50 border-red-200 animate-pulse' : 'bg-gray-50 border-gray-200'}`}>
+              <p className="text-[9px] font-bold uppercase tracking-widest mb-1 text-gray-400">Bạn nói:</p>
+              <p className="text-sm text-gray-800 italic">{shadowTranscript || '...'}</p>
+            </div>
+          )}
+
+          {shadowScore !== null && (
+            <div className={`rounded-2xl p-4 border shrink-0 text-center ${shadowScore >= 80 ? 'bg-green-50 border-green-300' : shadowScore >= 50 ? 'bg-yellow-50 border-yellow-300' : 'bg-red-50 border-red-300'}`}>
+              <p className={`text-3xl font-black mb-1 ${shadowScore >= 80 ? 'text-green-600' : shadowScore >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>{shadowScore}%</p>
+              <p className="text-xs font-bold text-gray-500 mb-2">{shadowScore >= 80 ? '🔥 Xuất sắc! Ngữ điệu rất chuẩn!' : shadowScore >= 50 ? '💪 Khá rồi, luyện thêm nhé!' : '📚 Cần luyện nhiều hơn!'}</p>
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div className={`h-2 rounded-full transition-all duration-700 ${shadowScore >= 80 ? 'bg-green-500' : shadowScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${shadowScore}%` }} />
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2">Dựa trên độ khớp từ với câu gốc</p>
+              <button onClick={handleShadowPlay} className="mt-2 text-xs font-bold text-purple-600 hover:text-purple-800 underline">Thử lại</button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
     );
   }
@@ -2932,12 +3138,31 @@ Bản sửa chuẩn Executive:
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-4 border border-gray-200 shadow-sm shrink-0">
+        <div className={`bg-white rounded-3xl p-4 border shadow-sm shrink-0 ${survivalActive ? 'border-red-400 ring-2 ring-red-200' : 'border-gray-200'}`}>
           <div className="flex justify-between items-center mb-3">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🎙️ Thu âm phản hồi</span>
-            <button onClick={toggleRecording} className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-bold transition-all shadow-md ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-800 hover:bg-gray-900'}`}>
-              <IconMicOutline /> {isRecording ? "Đang thu âm..." : "Bấm để Nói"}
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🎙️ Thu âm phản hồi</span>
+              {survivalActive && (
+                <span className={`text-lg font-black ${survivalSeconds <= 5 ? 'text-red-600 animate-pulse' : 'text-orange-500'}`}>
+                  ⏱️ {survivalSeconds}s
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {!survivalActive && (
+                <button onClick={startSurvivalMode} disabled={isRecording} className="flex items-center gap-1 px-3 py-1.5 rounded-full text-white text-xs font-bold bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 shadow-md transition-all">
+                  🔥 Sinh Tồn 15s
+                </button>
+              )}
+              {survivalActive && (
+                <button onClick={() => { clearInterval(survivalTimerRef.current); setSurvivalActive(false); recognitionRef.current?.stop(); }} className="px-3 py-1.5 rounded-full text-white text-xs font-bold bg-gray-600 hover:bg-gray-700">
+                  Hủy
+                </button>
+              )}
+              <button onClick={toggleRecording} className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-bold transition-all shadow-md ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-800 hover:bg-gray-900'}`}>
+                <IconMicOutline /> {isRecording ? "Đang thu âm..." : "Bấm để Nói"}
+              </button>
+            </div>
           </div>
           <textarea
             value={speakTranscript} onChange={(e) => setSpeakTranscript(e.target.value)}
@@ -2945,7 +3170,7 @@ Bản sửa chuẩn Executive:
             placeholder="Nhấn nút Micro và nói tiếng Anh, hoặc anh có thể gõ trực tiếp..."
           />
           <div className="mt-3 flex justify-between items-center">
-            <button onClick={() => { setSpeakIdx(prev => (prev + 1) % speakingData.length); setSpeakTranscript(''); setSpeakFeedback(null); }} className="text-xs font-semibold text-gray-500 hover:text-gray-800 px-3 py-1.5 border border-gray-200 rounded-lg">Đổi tình huống</button>
+            <button onClick={() => { setSpeakIdx(prev => (prev + 1) % speakingData.length); setSpeakTranscript(''); setSpeakFeedback(null); clearInterval(survivalTimerRef.current); setSurvivalActive(false); }} className="text-xs font-semibold text-gray-500 hover:text-gray-800 px-3 py-1.5 border border-gray-200 rounded-lg">Đổi tình huống</button>
             <button onClick={handleGradeSpeaking} disabled={isSpeakingGrading || isRecording} className={`px-5 py-2.5 rounded-xl text-white text-sm font-bold flex items-center gap-2 shadow-md transition-colors ${isSpeakingGrading || isRecording ? 'bg-gray-400 cursor-not-allowed' : 'bg-rose-600 hover:bg-rose-700'}`}>
               {isSpeakingGrading ? <IconLoading /> : <IconSparkles />} Gửi AI Đánh Giá
             </button>
@@ -3086,13 +3311,19 @@ Bản sửa chuẩn Executive:
         <header className="h-10 flex items-center justify-between px-4 border-b border-gray-100 bg-white/80 backdrop-blur-md shrink-0 z-10">
           <h1 className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-700 to-gray-900 tracking-tight hidden sm:block">FINTECH REFLEX</h1>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-3 py-1 bg-gray-100 text-gray-500 rounded-full border border-gray-200">
+            <span className="text-xs font-bold px-3 py-1 bg-gray-100 text-gray-500 rounded-full border border-gray-200 hidden sm:block">
               {activeModule === 'vocab' && `Từ Vựng Doanh Nghiệp (${allVocab.length} từ)`}
               {activeModule === 'listen' && 'Luyện Nghe'}
               {activeModule === 'read' && 'Đọc Hiểu Tình Huống'}
               {activeModule === 'speak' && 'Giao Tiếp Voice AI'}
               {activeModule === 'write' && 'Soạn Email Thực Chiến'}
             </span>
+            <button
+              onClick={() => setHardcoreMode(h => !h)}
+              className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black transition-all border ${hardcoreMode ? 'bg-red-500 text-white border-red-600 shadow-md shadow-red-500/30 animate-pulse' : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'}`}
+            >
+              🔥 {hardcoreMode ? 'HARDCORE ON' : 'Hardcore'}
+            </button>
           </div>
         </header>
 
