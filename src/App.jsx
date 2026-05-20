@@ -2706,40 +2706,42 @@ Bản sửa chuẩn Executive:
 
       {listenTabMode === 'dictation' && (
         <>
-          <div className="bg-white border border-gray-200 rounded-3xl p-4 shadow-sm mb-2 text-center relative overflow-hidden shrink-0">
-            <div className="absolute top-0 left-0 w-full h-1 bg-amber-400"></div>
-            <button onClick={() => playAudio(allListeningData[listenIdx].text)} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-full p-3 inline-flex items-center justify-center transition-transform hover:scale-105 shadow-lg shadow-amber-500/30 mb-2">
-              <IconPlay />
-            </button>
-            <p className="text-gray-600 font-medium text-xs mb-1.5">Bấm Play, nghe câu nói của đối tác và gõ lại chính xác nội dung.</p>
-            <p className="text-[11px] text-gray-500 italic bg-amber-50 inline-block px-3 py-1.5 rounded-full border border-amber-100">Hint: {allListeningData[listenIdx].hint}</p>
-          </div>
-
-          <textarea
-            value={listenInput} onChange={(e) => setListenInput(e.target.value)}
-            className="w-full flex-1 min-h-[64px] bg-white border border-gray-200 rounded-2xl p-3 text-gray-900 text-sm resize-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 mb-2 outline-none shadow-inner"
-            placeholder="Type exactly what you hear here..."
-          />
-
-          {showListenAnswer && (
-            <div className="bg-green-50 border border-green-200 rounded-2xl p-3 mb-2 animate-fade-in shadow-sm relative shrink-0">
-              <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
-              <div className="flex justify-between items-center mb-1.5">
-                <p className="text-green-700 font-bold text-xs uppercase tracking-wide">Đáp án:</p>
-                <button onClick={() => playAudio(allListeningData[listenIdx].text)} className="text-green-700 hover:text-green-900"><IconPlay /></button>
-              </div>
-              <p className="text-gray-900 text-sm font-medium mb-2">{allListeningData[listenIdx].text}</p>
-              <div className="bg-white rounded-xl p-2.5 border border-green-100 shadow-sm max-h-24 overflow-y-auto">
-                <div className="flex items-center gap-1.5 mb-1 border-b border-green-50 pb-1">
-                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center shadow-sm border border-green-200">
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-teal-600 font-black text-[9px]">AI</span>
-                  </div>
-                  <h4 className="text-green-800 font-bold text-xs">Góc phân tích:</h4>
-                </div>
-                <p className="text-gray-700 whitespace-pre-line text-xs leading-relaxed font-mono">{allListeningData[listenIdx].explanation}</p>
-              </div>
+          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pb-2">
+            <div className="bg-white border border-gray-200 rounded-3xl p-4 shadow-sm text-center relative overflow-hidden shrink-0">
+              <div className="absolute top-0 left-0 w-full h-1 bg-amber-400"></div>
+              <button onClick={() => playAudio(allListeningData[listenIdx].text)} className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-full p-3 inline-flex items-center justify-center transition-transform hover:scale-105 shadow-lg shadow-amber-500/30 mb-2">
+                <IconPlay />
+              </button>
+              <p className="text-gray-600 font-medium text-xs mb-1.5">Bấm Play, nghe câu nói của đối tác và gõ lại chính xác nội dung.</p>
+              <p className="text-[11px] text-gray-500 italic bg-amber-50 inline-block px-3 py-1.5 rounded-full border border-amber-100">Hint: {allListeningData[listenIdx].hint}</p>
             </div>
-          )}
+
+            <textarea
+              value={listenInput} onChange={(e) => setListenInput(e.target.value)}
+              className="w-full min-h-[80px] bg-white border border-gray-200 rounded-2xl p-3 text-gray-900 text-sm resize-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none shadow-inner shrink-0"
+              placeholder="Type exactly what you hear here..."
+            />
+
+            {showListenAnswer && (
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-3 animate-fade-in shadow-sm relative shrink-0">
+                <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <p className="text-green-700 font-bold text-xs uppercase tracking-wide">Đáp án:</p>
+                  <button onClick={() => playAudio(allListeningData[listenIdx].text)} className="text-green-700 hover:text-green-900"><IconPlay /></button>
+                </div>
+                <p className="text-gray-900 text-sm font-medium mb-2">{allListeningData[listenIdx].text}</p>
+                <div className="bg-white rounded-xl p-2.5 border border-green-100 shadow-sm">
+                  <div className="flex items-center gap-1.5 mb-1 border-b border-green-50 pb-1">
+                    <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center shadow-sm border border-green-200">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-teal-600 font-black text-[9px]">AI</span>
+                    </div>
+                    <h4 className="text-green-800 font-bold text-xs">Góc phân tích:</h4>
+                  </div>
+                  <p className="text-gray-700 whitespace-pre-line text-xs leading-relaxed font-mono">{allListeningData[listenIdx].explanation}</p>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="flex justify-between gap-3 shrink-0">
             <button onClick={() => setShowListenAnswer(!showListenAnswer)} className="flex-1 py-2 bg-white hover:bg-gray-50 rounded-xl text-gray-700 font-bold text-xs border border-gray-300 transition shadow-sm">
@@ -2915,58 +2917,60 @@ Bản sửa chuẩn Executive:
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-2 shrink-0">
-        <div className="md:col-span-3 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-center">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-rose-400"></div>
-          <h3 className="text-sm font-bold text-gray-900 mb-1.5">{speakingData[speakIdx].title}</h3>
-          <p className="text-gray-700 text-xs mb-2 leading-relaxed"><strong className="text-gray-900">Bối cảnh:</strong> {speakingData[speakIdx].context}</p>
-          <div className="bg-rose-50 border border-rose-100 rounded-xl p-2">
-            <p className="text-xs text-rose-800"><strong className="text-rose-600 block mb-0.5">Nhiệm vụ:</strong> {speakingData[speakIdx].role}</p>
-          </div>
-        </div>
-        <div className="md:col-span-2 hidden md:block h-full">
-          {renderVisual(speakingData[speakIdx].visualType)}
-        </div>
-      </div>
-
-      <div className="flex-1 bg-white rounded-3xl p-5 border border-gray-200 shadow-sm flex flex-col min-h-0">
-        <div className="flex justify-between items-center mb-3 shrink-0">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🎙️ Thu âm phản hồi</span>
-          <button onClick={toggleRecording} className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-bold transition-all shadow-md ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-800 hover:bg-gray-900'}`}>
-            <IconMicOutline /> {isRecording ? "Đang thu âm..." : "Bấm để Nói"}
-          </button>
-        </div>
-        <textarea
-          value={speakTranscript} onChange={(e) => setSpeakTranscript(e.target.value)}
-          className={`w-full flex-1 bg-gray-50 border p-3 rounded-2xl text-gray-900 text-sm resize-none outline-none transition-colors ${isRecording ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-200 focus:border-rose-400'}`}
-          placeholder="Nhấn nút Micro và nói tiếng Anh, hoặc anh có thể gõ trực tiếp..."
-        />
-        <div className="mt-3 flex justify-between items-center shrink-0">
-          <button onClick={() => { setSpeakIdx(prev => (prev + 1) % speakingData.length); setSpeakTranscript(''); setSpeakFeedback(null); }} className="text-xs font-semibold text-gray-500 hover:text-gray-800 px-3 py-1.5 border border-gray-200 rounded-lg">Đổi tình huống</button>
-          <button onClick={handleGradeSpeaking} disabled={isSpeakingGrading || isRecording} className={`px-5 py-2.5 rounded-xl text-white text-sm font-bold flex items-center gap-2 shadow-md transition-colors ${isSpeakingGrading || isRecording ? 'bg-gray-400 cursor-not-allowed' : 'bg-rose-600 hover:bg-rose-700'}`}>
-            {isSpeakingGrading ? <IconLoading /> : <IconSparkles />} Gửi AI Đánh Giá
-          </button>
-        </div>
-      </div>
-
-      {speakFeedback && (
-        <div className="mt-2 bg-gradient-to-br from-rose-50 to-white border border-rose-200 rounded-3xl p-4 shadow-md animate-fade-in relative overflow-hidden shrink-0 max-h-52 overflow-y-auto">
-          <div className="absolute top-0 right-0 p-5 opacity-5 text-rose-500 transform scale-[2]"><IconSparkles /></div>
-          <div className="flex items-center gap-2 mb-3 border-b border-rose-100 pb-2">
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm border border-rose-200">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-500 font-black text-xs">AI</span>
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pb-1">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 shrink-0">
+          <div className="md:col-span-3 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-center">
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-rose-400"></div>
+            <h3 className="text-sm font-bold text-gray-900 mb-1.5">{speakingData[speakIdx].title}</h3>
+            <p className="text-gray-700 text-xs mb-2 leading-relaxed"><strong className="text-gray-900">Bối cảnh:</strong> {speakingData[speakIdx].context}</p>
+            <div className="bg-rose-50 border border-rose-100 rounded-xl p-2">
+              <p className="text-xs text-rose-800"><strong className="text-rose-600 block mb-0.5">Nhiệm vụ:</strong> {speakingData[speakIdx].role}</p>
             </div>
-            <h4 className="text-rose-800 font-bold text-sm">Tiểu Nguyên Feedback</h4>
           </div>
-          <div className="text-gray-800 text-sm leading-relaxed font-medium">{formatAIResponse(speakFeedback)}</div>
-          <div className="mt-4 pt-3 flex justify-between items-center border-t border-rose-100">
-            <button onClick={() => { const match = speakFeedback.match(/\*\*(.*?)\*\*/); if (match?.[1]) playAudio(match[1]); }} className="px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-full text-xs font-bold flex items-center gap-1.5 transition">
-              <IconPlay /> Nghe AI đọc mẫu
-            </button>
-            <button onClick={() => setSpeakFeedback(null)} className="px-3 py-1.5 text-gray-500 hover:text-gray-800 font-semibold text-xs">Đóng</button>
+          <div className="md:col-span-2 hidden md:block h-full">
+            {renderVisual(speakingData[speakIdx].visualType)}
           </div>
         </div>
-      )}
+
+        <div className="bg-white rounded-3xl p-4 border border-gray-200 shadow-sm shrink-0">
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">🎙️ Thu âm phản hồi</span>
+            <button onClick={toggleRecording} className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-bold transition-all shadow-md ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-800 hover:bg-gray-900'}`}>
+              <IconMicOutline /> {isRecording ? "Đang thu âm..." : "Bấm để Nói"}
+            </button>
+          </div>
+          <textarea
+            value={speakTranscript} onChange={(e) => setSpeakTranscript(e.target.value)}
+            className={`w-full min-h-[100px] bg-gray-50 border p-3 rounded-2xl text-gray-900 text-sm resize-none outline-none transition-colors ${isRecording ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-200 focus:border-rose-400'}`}
+            placeholder="Nhấn nút Micro và nói tiếng Anh, hoặc anh có thể gõ trực tiếp..."
+          />
+          <div className="mt-3 flex justify-between items-center">
+            <button onClick={() => { setSpeakIdx(prev => (prev + 1) % speakingData.length); setSpeakTranscript(''); setSpeakFeedback(null); }} className="text-xs font-semibold text-gray-500 hover:text-gray-800 px-3 py-1.5 border border-gray-200 rounded-lg">Đổi tình huống</button>
+            <button onClick={handleGradeSpeaking} disabled={isSpeakingGrading || isRecording} className={`px-5 py-2.5 rounded-xl text-white text-sm font-bold flex items-center gap-2 shadow-md transition-colors ${isSpeakingGrading || isRecording ? 'bg-gray-400 cursor-not-allowed' : 'bg-rose-600 hover:bg-rose-700'}`}>
+              {isSpeakingGrading ? <IconLoading /> : <IconSparkles />} Gửi AI Đánh Giá
+            </button>
+          </div>
+        </div>
+
+        {speakFeedback && (
+          <div className="bg-gradient-to-br from-rose-50 to-white border border-rose-200 rounded-3xl p-4 shadow-md animate-fade-in relative overflow-hidden shrink-0">
+            <div className="absolute top-0 right-0 p-5 opacity-5 text-rose-500 transform scale-[2]"><IconSparkles /></div>
+            <div className="flex items-center gap-2 mb-3 border-b border-rose-100 pb-2">
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm border border-rose-200">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-500 font-black text-xs">AI</span>
+              </div>
+              <h4 className="text-rose-800 font-bold text-sm">Tiểu Nguyên Feedback</h4>
+            </div>
+            <div className="text-gray-800 text-sm leading-relaxed font-medium">{formatAIResponse(speakFeedback)}</div>
+            <div className="mt-4 pt-3 flex justify-between items-center border-t border-rose-100">
+              <button onClick={() => { const match = speakFeedback.match(/\*\*(.*?)\*\*/); if (match?.[1]) playAudio(match[1]); }} className="px-4 py-2 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-full text-xs font-bold flex items-center gap-1.5 transition">
+                <IconPlay /> Nghe AI đọc mẫu
+              </button>
+              <button onClick={() => setSpeakFeedback(null)} className="px-3 py-1.5 text-gray-500 hover:text-gray-800 font-semibold text-xs">Đóng</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
     );
   }
@@ -2990,52 +2994,54 @@ Bản sửa chuẩn Executive:
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-2 shrink-0">
-        <div className="md:col-span-3 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-center">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-400"></div>
-          <h3 className="text-sm font-bold text-gray-900 mb-1.5">{writingData[writeIdx].title}</h3>
-          <p className="text-gray-700 text-xs mb-2 leading-relaxed"><strong className="text-gray-900">Bối cảnh:</strong> {writingData[writeIdx].context}</p>
-          <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-100 p-2 rounded-xl"><strong className="text-emerald-700 block mb-0.5">Nhiệm vụ:</strong> {writingData[writeIdx].task}</p>
-        </div>
-        <div className="md:col-span-2 hidden md:block h-full">
-          {renderVisual(writingData[writeIdx].visualType)}
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden min-h-0">
-        <div className="bg-gray-50 p-3 border-b border-gray-200 flex items-center gap-2 shrink-0">
-          <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">✍️ Khung soạn thảo</span>
-        </div>
-        <textarea
-          value={writeInput} onChange={(e) => setWriteInput(e.target.value)}
-          disabled={isGrading}
-          className="flex-1 w-full bg-transparent p-3 text-gray-900 text-sm resize-none outline-none"
-          placeholder="Gõ bản nháp tiếng Anh của anh vào đây..."
-        />
-        <div className="p-3 bg-gray-50 border-t border-gray-200 flex flex-row justify-between items-center gap-4 shrink-0">
-          <span className="text-xs text-gray-500 font-mono bg-white px-2 py-1 rounded border border-gray-200">{writeInput.length} chars</span>
-          <button onClick={handleGradeWriting} disabled={isGrading} className={`text-white font-bold py-2 px-5 rounded-xl transition-colors text-sm shadow-md flex items-center gap-1.5 ${isGrading ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700'}`}>
-            {isGrading ? <IconLoading /> : <IconSparkles />}
-            {isGrading ? "Đang đọc..." : "Gửi AI Chấm"}
-          </button>
-        </div>
-      </div>
-
-      {writeFeedback && (
-        <div className="mt-2 bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-4 shadow-lg text-gray-300 animate-fade-in relative overflow-hidden shrink-0 max-h-52 overflow-y-auto">
-          <div className="absolute top-0 right-0 p-6 opacity-10 text-emerald-500 transform scale-[2]"><IconSparkles /></div>
-          <h4 className="flex items-center gap-2 text-emerald-400 font-bold mb-4 text-sm border-b border-gray-700 pb-3">
-            <IconSparkles /> Tiểu Nguyên Feedback
-          </h4>
-          <div className="text-gray-300 text-sm leading-relaxed font-medium">{formatAIResponse(writeFeedback)}</div>
-          <div className="mt-4 border-t border-gray-700 pt-3 flex justify-between items-center">
-            <button onClick={() => { const match = writeFeedback.match(/\*\*(.*?)\*\*/); if (match?.[1]) playAudio(match[1]); }} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-full font-bold flex items-center gap-1.5 transition text-xs">
-              <IconPlay /> Nghe giọng đọc
-            </button>
-            <button onClick={() => setWriteFeedback(null)} className="px-4 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-semibold transition text-xs">Đóng</button>
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pb-1">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 shrink-0">
+          <div className="md:col-span-3 bg-white border border-gray-200 rounded-3xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-center">
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-400"></div>
+            <h3 className="text-sm font-bold text-gray-900 mb-1.5">{writingData[writeIdx].title}</h3>
+            <p className="text-gray-700 text-xs mb-2 leading-relaxed"><strong className="text-gray-900">Bối cảnh:</strong> {writingData[writeIdx].context}</p>
+            <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-100 p-2 rounded-xl"><strong className="text-emerald-700 block mb-0.5">Nhiệm vụ:</strong> {writingData[writeIdx].task}</p>
+          </div>
+          <div className="md:col-span-2 hidden md:block h-full">
+            {renderVisual(writingData[writeIdx].visualType)}
           </div>
         </div>
-      )}
+
+        <div className="flex flex-col bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden shrink-0">
+          <div className="bg-gray-50 p-3 border-b border-gray-200 flex items-center gap-2">
+            <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">✍️ Khung soạn thảo</span>
+          </div>
+          <textarea
+            value={writeInput} onChange={(e) => setWriteInput(e.target.value)}
+            disabled={isGrading}
+            className="w-full min-h-[120px] bg-transparent p-3 text-gray-900 text-sm resize-none outline-none"
+            placeholder="Gõ bản nháp tiếng Anh của anh vào đây..."
+          />
+          <div className="p-3 bg-gray-50 border-t border-gray-200 flex flex-row justify-between items-center gap-4">
+            <span className="text-xs text-gray-500 font-mono bg-white px-2 py-1 rounded border border-gray-200">{writeInput.length} chars</span>
+            <button onClick={handleGradeWriting} disabled={isGrading} className={`text-white font-bold py-2 px-5 rounded-xl transition-colors text-sm shadow-md flex items-center gap-1.5 ${isGrading ? 'bg-gray-400 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700'}`}>
+              {isGrading ? <IconLoading /> : <IconSparkles />}
+              {isGrading ? "Đang đọc..." : "Gửi AI Chấm"}
+            </button>
+          </div>
+        </div>
+
+        {writeFeedback && (
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-4 shadow-lg text-gray-300 animate-fade-in relative overflow-hidden shrink-0">
+            <div className="absolute top-0 right-0 p-6 opacity-10 text-emerald-500 transform scale-[2]"><IconSparkles /></div>
+            <h4 className="flex items-center gap-2 text-emerald-400 font-bold mb-4 text-sm border-b border-gray-700 pb-3">
+              <IconSparkles /> Tiểu Nguyên Feedback
+            </h4>
+            <div className="text-gray-300 text-sm leading-relaxed font-medium">{formatAIResponse(writeFeedback)}</div>
+            <div className="mt-4 border-t border-gray-700 pt-3 flex justify-between items-center">
+              <button onClick={() => { const match = writeFeedback.match(/\*\*(.*?)\*\*/); if (match?.[1]) playAudio(match[1]); }} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-full font-bold flex items-center gap-1.5 transition text-xs">
+                <IconPlay /> Nghe giọng đọc
+              </button>
+              <button onClick={() => setWriteFeedback(null)} className="px-4 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-white font-semibold transition text-xs">Đóng</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
     );
   }
