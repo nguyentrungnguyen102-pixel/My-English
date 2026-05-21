@@ -14864,9 +14864,24 @@ Bản sửa chuẩn Executive:
 				className: "flex-1 flex flex-col h-full relative overflow-hidden",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
 					className: "h-10 flex items-center justify-between px-4 border-b border-gray-100 bg-white/80 backdrop-blur-md shrink-0 z-10",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-						className: "text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-700 to-gray-900 tracking-tight hidden sm:block",
-						children: "FINTECH REFLEX"
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "flex items-center gap-1.5",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+								className: "text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-700 to-gray-900 tracking-tight hidden sm:block",
+								children: "FINTECH REFLEX"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "text-[10px] font-black px-1.5 py-0.5 bg-blue-600 text-white rounded-md",
+								children: "v3"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+								href: "/My-English/ver2/",
+								className: "text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md border border-gray-200 hover:bg-gray-200 transition",
+								title: "Chuyển sang bản ổn định v2",
+								children: "↩ v2"
+							})
+						]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "flex items-center gap-2",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
