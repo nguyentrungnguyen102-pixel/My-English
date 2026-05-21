@@ -3309,7 +3309,11 @@ Bản sửa chuẩn Executive:
 
       <main className="flex-1 flex flex-col h-full relative overflow-hidden">
         <header className="h-10 flex items-center justify-between px-4 border-b border-gray-100 bg-white/80 backdrop-blur-md shrink-0 z-10">
-          <h1 className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-700 to-gray-900 tracking-tight hidden sm:block">FINTECH REFLEX</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-700 to-gray-900 tracking-tight hidden sm:block">FINTECH REFLEX</h1>
+            <span className="text-[10px] font-black px-1.5 py-0.5 bg-blue-600 text-white rounded-md">v3</span>
+            <a href="/My-English/ver2/" className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md border border-gray-200 hover:bg-gray-200 transition" title="Chuyển sang bản ổn định v2">↩ v2</a>
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold px-3 py-1 bg-gray-100 text-gray-500 rounded-full border border-gray-200 hidden sm:block">
               {activeModule === 'vocab' && `Từ Vựng Doanh Nghiệp (${allVocab.length} từ)`}

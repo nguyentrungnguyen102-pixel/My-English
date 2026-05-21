@@ -12,7 +12,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout ver3 (current branch)
         uses: actions/checkout@v4
 
       - name: Setup Node
@@ -21,13 +21,28 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
-        run: npm install
+      - name: Build ver3 -> root /My-English/
+        run: |
+          npm install
+          npm run build
 
-      - name: Build
-        run: npm run build
+      - name: Checkout ver2 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ver2
+          path: ver2src
 
-      - name: Deploy to gh-pages branch
+      - name: Build ver2 -> /My-English/ver2/
+        continue-on-error: true
+        run: |
+          cd ver2src
+          npm install
+          npx vite build --base=/My-English/ver2/
+          cd ..
+          mkdir -p dist/ver2
+          cp -r ver2src/dist/* dist/ver2/
+
+      - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
