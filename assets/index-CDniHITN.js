@@ -13006,6 +13006,28 @@ function App() {
 	});
 	const [isGeneratingNew, setIsGeneratingNew] = (0, import_react.useState)(false);
 	const [hardcoreMode, setHardcoreMode] = (0, import_react.useState)(false);
+	const [streak, setStreak] = (0, import_react.useState)(() => {
+		try {
+			return JSON.parse(localStorage.getItem("studyStreak") || "{\"count\":0,\"lastDate\":\"\"}");
+		} catch {
+			return {
+				count: 0,
+				lastDate: ""
+			};
+		}
+	});
+	const [xp, setXp] = (0, import_react.useState)(() => parseInt(localStorage.getItem("userXP") || "0", 10));
+	const [dailyLog, setDailyLog] = (0, import_react.useState)(() => {
+		try {
+			return JSON.parse(localStorage.getItem("dailyLog") || "{}");
+		} catch {
+			return {};
+		}
+	});
+	const DAILY_GOAL = 50;
+	const [hearts, setHearts] = (0, import_react.useState)(5);
+	const MAX_HEARTS = 5;
+	const [showCalendar, setShowCalendar] = (0, import_react.useState)(false);
 	const [allListeningData, setAllListeningData] = (0, import_react.useState)(() => {
 		try {
 			const safe = JSON.parse(localStorage.getItem("extraListeningData") || "[]").filter((r) => r && typeof r.text === "string");
@@ -13063,6 +13085,44 @@ function App() {
 		const random = modules[Math.floor(Math.random() * modules.length)];
 		setActiveModule(random);
 		showToast(`Đã chuyển sang ngẫu nhiên: ${random.toUpperCase()}`);
+	}
+	function randomNext(len, current) {
+		if (len <= 1) return 0;
+		let next;
+		do
+			next = Math.floor(Math.random() * len);
+		while (next === current);
+		return next;
+	}
+	function updateStreak() {
+		const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+		setStreak((prev) => {
+			if (prev.lastDate === today) return prev;
+			const yesterday = (/* @__PURE__ */ new Date(Date.now() - 864e5)).toISOString().slice(0, 10);
+			const next = {
+				count: prev.lastDate === yesterday ? prev.count + 1 : 1,
+				lastDate: today
+			};
+			localStorage.setItem("studyStreak", JSON.stringify(next));
+			return next;
+		});
+	}
+	function addXP(amount) {
+		const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+		setXp((prev) => {
+			const next = Math.max(0, prev + amount);
+			localStorage.setItem("userXP", String(next));
+			return next;
+		});
+		setDailyLog((prev) => {
+			const next = {
+				...prev,
+				[today]: Math.max(0, (prev[today] || 0) + amount)
+			};
+			localStorage.setItem("dailyLog", JSON.stringify(next));
+			return next;
+		});
+		updateStreak();
 	}
 	function playAudio(text) {
 		if ("speechSynthesis" in window) {
@@ -13250,30 +13310,27 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
 	const [quizAnswered, setQuizAnswered] = (0, import_react.useState)(null);
 	const [quizTimer, setQuizTimer] = (0, import_react.useState)(null);
 	const quizTimerRef = (0, import_react.useRef)(null);
+	const quizOptionsRef = (0, import_react.useRef)([]);
+	const quizAnsweredRef = (0, import_react.useRef)(null);
+	const correctAnswerRef = (0, import_react.useRef)(null);
 	const [quizIsHardcore, setQuizIsHardcore] = (0, import_react.useState)(false);
 	function generateQuiz() {
 		const currentWord = allVocab[cardIdx];
 		const isHC = hardcoreMode;
 		setQuizIsHardcore(isHC);
-		if (isHC) {
-			let options = [currentWord.vi];
-			let attempts = 0;
-			while (options.length < 4 && attempts < 50) {
-				const rand = allVocab[Math.floor(Math.random() * allVocab.length)].vi;
-				if (!options.includes(rand)) options.push(rand);
-				attempts++;
-			}
-			setQuizOptions(options.sort(() => Math.random() - .5));
-		} else {
-			let options = [currentWord.word];
-			let attempts = 0;
-			while (options.length < 4 && attempts < 50) {
-				const randomWord = allVocab[Math.floor(Math.random() * allVocab.length)].word;
-				if (!options.includes(randomWord)) options.push(randomWord);
-				attempts++;
-			}
-			setQuizOptions(options.sort(() => Math.random() - .5));
+		const correct = isHC ? currentWord.vi : currentWord.word;
+		correctAnswerRef.current = correct;
+		quizAnsweredRef.current = null;
+		let options = [correct];
+		let attempts = 0;
+		while (options.length < 4 && attempts < 50) {
+			const rand = isHC ? allVocab[Math.floor(Math.random() * allVocab.length)].vi : allVocab[Math.floor(Math.random() * allVocab.length)].word;
+			if (!options.includes(rand)) options.push(rand);
+			attempts++;
 		}
+		const shuffled = options.sort(() => Math.random() - .5);
+		quizOptionsRef.current = shuffled;
+		setQuizOptions(shuffled);
 		setQuizAnswered(null);
 	}
 	(0, import_react.useEffect)(() => {
@@ -13309,16 +13366,27 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
 		hardcoreMode
 	]);
 	(0, import_react.useEffect)(() => {
-		if (hardcoreMode && vocabMode === "quiz" && quizTimer === 0 && quizAnswered === null && quizOptions.length > 0) {
-			const correct = quizIsHardcore ? allVocab[cardIdx]?.vi : allVocab[cardIdx]?.word;
-			handleQuizAnswer(quizOptions.find((o) => o !== correct) || quizOptions[0]);
+		if (hardcoreMode) setHearts(MAX_HEARTS);
+	}, [hardcoreMode]);
+	(0, import_react.useEffect)(() => {
+		if (hardcoreMode && vocabMode === "quiz" && quizTimer === 0 && quizAnsweredRef.current === null) {
+			const opts = quizOptionsRef.current;
+			const correct = correctAnswerRef.current;
+			if (opts.length > 0) handleQuizAnswer(opts.find((o) => o !== correct) || opts[0]);
 		}
 	}, [quizTimer]);
 	function handleQuizAnswer(selected) {
-		if (quizAnswered) return;
+		if (quizAnsweredRef.current !== null) return;
+		quizAnsweredRef.current = selected;
 		setQuizAnswered(selected);
 		clearInterval(quizTimerRef.current);
-		if (selected === (quizIsHardcore ? allVocab[cardIdx].vi : allVocab[cardIdx].word)) setQuizScore((prev) => prev + 1);
+		if (selected === correctAnswerRef.current) {
+			setQuizScore((prev) => prev + 1);
+			addXP(hardcoreMode ? 25 : 10);
+		} else if (hardcoreMode) {
+			addXP(-5);
+			setHearts((h) => Math.max(0, h - 1));
+		}
 	}
 	const [listenTabMode, setListenTabMode] = (0, import_react.useState)("dictation");
 	const [listenIdx, setListenIdx] = (0, import_react.useState)(() => {
@@ -13375,7 +13443,11 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
 		};
 		rec.onend = () => {
 			setShadowRecording(false);
-			setShadowScore(calcSimilarity(allListeningData[shadowIdx].text, shadowTranscriptRef.current));
+			const score = calcSimilarity(allListeningData[shadowIdx].text, shadowTranscriptRef.current);
+			setShadowScore(score);
+			if (score >= 80) addXP(20);
+			else if (score >= 50) addXP(10);
+			else addXP(3);
 		};
 		rec.onerror = () => setShadowRecording(false);
 		shadowRecognitionRef.current = rec;
@@ -13602,8 +13674,10 @@ Dạ anh, em Tiểu Nguyên đây. Về câu phản xạ của anh, em có vài 
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
 			})).json();
-			if (result.candidates?.[0]?.content) setSpeakFeedback(result.candidates[0].content.parts[0].text);
-			else setSpeakFeedback("Hệ thống không thể chấm điểm lúc này. Anh thử lại sau nhé.");
+			if (result.candidates?.[0]?.content) {
+				setSpeakFeedback(result.candidates[0].content.parts[0].text);
+				addXP(10);
+			} else setSpeakFeedback("Hệ thống không thể chấm điểm lúc này. Anh thử lại sau nhé.");
 		} catch {
 			setSpeakFeedback("Dạ hệ thống AI đang bảo trì, anh thông cảm nhé!");
 		}
@@ -13687,8 +13761,10 @@ Bản sửa chuẩn Executive:
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
 			})).json();
-			if (result.candidates?.[0]?.content) setWriteFeedback(result.candidates[0].content.parts[0].text);
-			else setWriteFeedback("Hệ thống lỗi. Vui lòng thử lại.");
+			if (result.candidates?.[0]?.content) {
+				setWriteFeedback(result.candidates[0].content.parts[0].text);
+				addXP(10);
+			} else setWriteFeedback("Hệ thống lỗi. Vui lòng thử lại.");
 		} catch {
 			setWriteFeedback("Lỗi kết nối AI. Thử lại sau.");
 		}
@@ -13847,13 +13923,45 @@ Bản sửa chuẩn Executive:
 						})]
 					})
 				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: `w-full flex-1 flex flex-col bg-white border rounded-3xl p-3 shadow-sm text-center overflow-y-auto min-h-0 ${hardcoreMode && !quizAnswered ? "border-red-300" : "border-gray-200"}`,
+					className: `w-full flex-1 flex flex-col bg-white border rounded-3xl p-3 shadow-sm text-center overflow-y-auto min-h-0 relative ${hardcoreMode && !quizAnswered ? "border-red-300" : "border-gray-200"}`,
 					children: [
+						hardcoreMode && hearts === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "absolute inset-0 bg-white/95 rounded-3xl flex flex-col items-center justify-center z-10 gap-3",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "text-4xl",
+									children: "💔"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "font-black text-red-600 text-lg",
+									children: "Hết tim rồi!"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "text-gray-500 text-sm",
+									children: "Nghỉ ngơi một chút rồi tiếp tục nhé"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									onClick: () => setHearts(MAX_HEARTS),
+									className: "mt-2 px-4 py-2 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 transition",
+									children: "Hồi phục (×5 ❤️)"
+								})
+							]
+						}),
+						hardcoreMode && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "flex justify-center gap-1 mb-2 shrink-0",
+							children: Array.from({ length: MAX_HEARTS }).map((_, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: `text-base transition-all ${i < hearts ? "opacity-100" : "opacity-20"}`,
+								children: "❤️"
+							}, i))
+						}),
 						hardcoreMode && !quizAnswered && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "shrink-0 mb-2 flex items-center justify-center gap-2",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: `w-10 h-10 rounded-full flex items-center justify-center font-black text-xl border-4 ${quizTimer <= 1 ? "border-red-500 text-red-600 animate-ping" : quizTimer <= 2 ? "border-orange-400 text-orange-500" : "border-amber-400 text-amber-500"}`,
-								children: quizTimer
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "relative w-10 h-10 flex items-center justify-center",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: `absolute inset-0 rounded-full border-4 ${quizTimer <= 1 ? "border-red-500 animate-pulse" : quizTimer <= 2 ? "border-orange-400" : "border-amber-400"}` }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: `font-black text-xl z-10 ${quizTimer <= 1 ? "text-red-600" : quizTimer <= 2 ? "text-orange-500" : "text-amber-500"}`,
+									children: quizTimer
+								})]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 								className: "text-xs font-bold text-red-500 uppercase tracking-wide",
 								children: "Giây còn lại!"
@@ -13963,7 +14071,7 @@ Bản sửa chuẩn Executive:
 									})]
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-									onClick: () => setCardIdx((prev) => (prev + 1) % allVocab.length),
+									onClick: () => setCardIdx((prev) => randomNext(allVocab.length, prev)),
 									className: "mt-2 w-full py-1.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white text-xs font-bold transition-colors shadow-md shadow-blue-500/30",
 									children: "Làm câu tiếp theo"
 								})
@@ -13985,7 +14093,7 @@ Bản sửa chuẩn Executive:
 						onClick: () => {
 							setIsFlipped(false);
 							setShowHint(false);
-							setTimeout(() => setCardIdx((prev) => (prev + 1) % allVocab.length), 150);
+							setTimeout(() => setCardIdx((prev) => randomNext(allVocab.length, prev)), 150);
 						},
 						className: "flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-bold text-xs transition-colors shadow-md shadow-blue-500/30",
 						children: "Tiếp theo"
@@ -14112,9 +14220,10 @@ Bản sửa chuẩn Executive:
 						children: showListenAnswer ? "Ẩn đáp án" : "Xem đáp án"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 						onClick: () => {
-							setListenIdx((prev) => (prev + 1) % allListeningData.length);
+							setListenIdx((prev) => randomNext(allListeningData.length, prev));
 							setListenInput("");
 							setShowListenAnswer(false);
+							addXP(5);
 						},
 						className: "flex-1 py-2 bg-gray-900 hover:bg-gray-800 rounded-xl text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-1.5",
 						children: ["Câu tiếp ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(IconRandom, {})]
@@ -14288,7 +14397,7 @@ Bản sửa chuẩn Executive:
 								children: shadowPlaying ? "🔊 AI đang đọc 1.2x..." : shadowRecording ? "🎙️ Đang ghi âm bạn..." : "▶ Nghe & Nhại lại"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 								onClick: () => {
-									setShadowIdx((prev) => (prev + 1) % allListeningData.length);
+									setShadowIdx((prev) => randomNext(allListeningData.length, prev));
 									setShadowScore(null);
 									setShadowTranscript("");
 									window.speechSynthesis.cancel();
@@ -14400,7 +14509,10 @@ Bản sửa chuẩn Executive:
 								} else btnClass = "bg-white border-gray-200 text-gray-400 opacity-50";
 								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 									disabled: readAnswered !== null,
-									onClick: () => setReadAnswered(i),
+									onClick: () => {
+										setReadAnswered(i);
+										if (i === allReadingData[readIdx].answerIdx) addXP(15);
+									},
 									className: `text-left p-3 rounded-2xl border transition-all flex justify-between items-center text-sm ${btnClass}`,
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 										className: "font-medium",
@@ -14452,7 +14564,7 @@ Bản sửa chuẩn Executive:
 									className: "flex justify-end mt-3",
 									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 										onClick: () => {
-											setReadIdx((prev) => (prev + 1) % allReadingData.length);
+											setReadIdx((prev) => randomNext(allReadingData.length, prev));
 											setReadAnswered(null);
 										},
 										className: "px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-xs font-bold shadow-md transition",
@@ -14589,7 +14701,7 @@ Bản sửa chuẩn Executive:
 								className: "mt-3 flex justify-between items-center",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 									onClick: () => {
-										setSpeakIdx((prev) => (prev + 1) % speakingData.length);
+										setSpeakIdx((prev) => randomNext(speakingData.length, prev));
 										setSpeakTranscript("");
 										setSpeakFeedback(null);
 										clearInterval(survivalTimerRef.current);
@@ -14675,7 +14787,7 @@ Bản sửa chuẩn Executive:
 						children: [isGeneratingNew ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(IconLoading, {}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(IconSparkles, {}), " Tạo Bằng AI"]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						onClick: () => {
-							setWriteIdx((prev) => (prev + 1) % writingData.length);
+							setWriteIdx((prev) => randomNext(writingData.length, prev));
 							setWriteInput("");
 							setWriteFeedback(null);
 						},
@@ -14862,53 +14974,142 @@ Bản sửa chuẩn Executive:
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
 				className: "flex-1 flex flex-col h-full relative overflow-hidden",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
-					className: "h-10 flex items-center justify-between px-4 border-b border-gray-100 bg-white/80 backdrop-blur-md shrink-0 z-10",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "flex items-center gap-1.5",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-								className: "text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-700 to-gray-900 tracking-tight hidden sm:block",
-								children: "FINTECH REFLEX"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "text-[10px] font-black px-1.5 py-0.5 bg-blue-600 text-white rounded-md",
-								children: "v3"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
-								href: "/My-English/ver2/",
-								className: "text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md border border-gray-200 hover:bg-gray-200 transition",
-								title: "Chuyển sang bản ổn định v2",
-								children: "↩ v2"
-							})
-						]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "flex items-center gap-2",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-							className: "text-xs font-bold px-3 py-1 bg-gray-100 text-gray-500 rounded-full border border-gray-200 hidden sm:block",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
+						className: "h-10 flex items-center justify-between px-4 border-b border-gray-100 bg-white/80 backdrop-blur-md shrink-0 z-10",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex items-center gap-1.5",
 							children: [
-								activeModule === "vocab" && `Từ Vựng Doanh Nghiệp (${allVocab.length} từ)`,
-								activeModule === "listen" && "Luyện Nghe",
-								activeModule === "read" && "Đọc Hiểu Tình Huống",
-								activeModule === "speak" && "Giao Tiếp Voice AI",
-								activeModule === "write" && "Soạn Email Thực Chiến"
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+									className: "text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-700 to-gray-900 tracking-tight hidden sm:block",
+									children: "FINTECH REFLEX"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-[10px] font-black px-1.5 py-0.5 bg-blue-600 text-white rounded-md",
+									children: "v3"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+									href: "/My-English/ver2/",
+									className: "text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md border border-gray-200 hover:bg-gray-200 transition",
+									title: "Chuyển sang bản ổn định v2",
+									children: "↩ v2"
+								})
 							]
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-							onClick: () => setHardcoreMode((h) => !h),
-							className: `flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black transition-all border ${hardcoreMode ? "bg-red-500 text-white border-red-600 shadow-md shadow-red-500/30 animate-pulse" : "bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200"}`,
-							children: ["🔥 ", hardcoreMode ? "HARDCORE ON" : "Hardcore"]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex items-center gap-2",
+							children: [
+								(() => {
+									const xpToday = dailyLog[(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)] || 0;
+									return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "hidden sm:flex items-center gap-1.5",
+										children: [
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+												onClick: () => setShowCalendar((c) => !c),
+												title: "Lịch học",
+												className: `flex items-center gap-0.5 px-2 py-0.5 rounded-full border text-xs font-black transition-all ${streak.count > 0 && xpToday === 0 ? "bg-red-50 border-red-300 text-red-600 animate-pulse" : streak.count > 0 ? "bg-orange-50 border-orange-200 text-orange-600" : "bg-gray-50 border-gray-200 text-gray-400"}`,
+												children: ["🔥 ", streak.count]
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												className: `flex items-center gap-0.5 px-2 py-0.5 rounded-full border text-xs font-bold ${xpToday >= DAILY_GOAL ? "bg-green-50 border-green-200 text-green-600" : "bg-blue-50 border-blue-200 text-blue-500"}`,
+												children: [
+													"⚡ ",
+													xpToday,
+													"/",
+													DAILY_GOAL
+												]
+											}),
+											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												className: "flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-purple-600 text-xs font-bold",
+												children: ["🏆 ", xp]
+											})
+										]
+									});
+								})(),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "text-xs font-bold px-3 py-1 bg-gray-100 text-gray-500 rounded-full border border-gray-200 hidden sm:block",
+									children: [
+										activeModule === "vocab" && `Từ Vựng Doanh Nghiệp (${allVocab.length} từ)`,
+										activeModule === "listen" && "Luyện Nghe",
+										activeModule === "read" && "Đọc Hiểu Tình Huống",
+										activeModule === "speak" && "Giao Tiếp Voice AI",
+										activeModule === "write" && "Soạn Email Thực Chiến"
+									]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+									onClick: () => setHardcoreMode((h) => !h),
+									className: `flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black transition-all border ${hardcoreMode ? "bg-red-500 text-white border-red-600 shadow-md shadow-red-500/30 animate-pulse" : "bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200"}`,
+									children: ["🔥 ", hardcoreMode ? "HARDCORE ON" : "Hardcore"]
+								})
+							]
 						})]
-					})]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "flex-1 p-4 md:p-6 overflow-hidden",
-					children: [
-						activeModule === "vocab" && renderVocab(),
-						activeModule === "listen" && renderListen(),
-						activeModule === "read" && renderRead(),
-						activeModule === "speak" && renderSpeak(),
-						activeModule === "write" && renderWrite()
-					]
-				})]
+					}),
+					showCalendar && (() => {
+						const calDays = Array.from({ length: 35 }, (_, i) => {
+							const key = (/* @__PURE__ */ new Date(Date.now() - (34 - i) * 864e5)).toISOString().slice(0, 10);
+							const todayKey = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+							const xpDay = dailyLog[key] || 0;
+							return {
+								key,
+								color: xpDay >= 50 ? "bg-green-500" : xpDay >= 21 ? "bg-green-300" : xpDay >= 1 ? "bg-green-100" : "bg-gray-100",
+								isToday: key === todayKey
+							};
+						});
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "absolute top-10 right-4 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 w-64",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-center justify-between mb-3",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+										className: "text-xs font-black text-gray-700 uppercase tracking-wide",
+										children: "Lịch Học 35 Ngày"
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+										onClick: () => setShowCalendar(false),
+										className: "text-gray-400 hover:text-gray-600 text-xl leading-none font-bold",
+										children: "×"
+									})]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "grid grid-cols-7 gap-1",
+									children: calDays.map(({ key, color, isToday }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										title: key,
+										className: `w-6 h-6 rounded-sm ${color} ${isToday ? "ring-2 ring-blue-400" : ""}`
+									}, key))
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-center gap-2 mt-3 text-[10px] text-gray-500 flex-wrap",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: "flex items-center gap-1",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "w-3 h-3 rounded-sm bg-gray-100 inline-block border border-gray-200" }), "0 XP"]
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: "flex items-center gap-1",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "w-3 h-3 rounded-sm bg-green-100 inline-block" }), "1+"]
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: "flex items-center gap-1",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "w-3 h-3 rounded-sm bg-green-300 inline-block" }), "21+"]
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: "flex items-center gap-1",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "w-3 h-3 rounded-sm bg-green-500 inline-block" }), "50+"]
+										})
+									]
+								})
+							]
+						});
+					})(),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "flex-1 p-4 md:p-6 overflow-hidden",
+						children: [
+							activeModule === "vocab" && renderVocab(),
+							activeModule === "listen" && renderListen(),
+							activeModule === "read" && renderRead(),
+							activeModule === "speak" && renderSpeak(),
+							activeModule === "write" && renderWrite()
+						]
+					})
+				]
 			}),
 			showAddVocab && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4",
