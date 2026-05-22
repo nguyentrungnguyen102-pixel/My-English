@@ -2007,6 +2007,21 @@ export default function App() {
   const [isGeneratingNew, setIsGeneratingNew] = useState(false);
   const [hardcoreMode, setHardcoreMode] = useState(false);
 
+  // ── Engagement: Streak / XP / Hearts ──
+  const [streak, setStreak] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('studyStreak') || '{"count":0,"lastDate":""}'); }
+    catch { return { count: 0, lastDate: '' }; }
+  });
+  const [xp, setXp] = useState(() => parseInt(localStorage.getItem('userXP') || '0', 10));
+  const [dailyLog, setDailyLog] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dailyLog') || '{}'); }
+    catch { return {}; }
+  });
+  const DAILY_GOAL = 50;
+  const [hearts, setHearts] = useState(5);
+  const MAX_HEARTS = 5;
+  const [showCalendar, setShowCalendar] = useState(false);
+
   const [allListeningData, setAllListeningData] = useState(() => {
     try {
       const extra = JSON.parse(localStorage.getItem('extraListeningData') || '[]');
@@ -2058,6 +2073,40 @@ export default function App() {
     const random = modules[Math.floor(Math.random() * modules.length)];
     setActiveModule(random);
     showToast(`Đã chuyển sang ngẫu nhiên: ${random.toUpperCase()}`);
+  }
+
+  function randomNext(len, current) {
+    if (len <= 1) return 0;
+    let next;
+    do { next = Math.floor(Math.random() * len); } while (next === current);
+    return next;
+  }
+
+  function updateStreak() {
+    const today = new Date().toISOString().slice(0, 10);
+    setStreak(prev => {
+      if (prev.lastDate === today) return prev;
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const count = prev.lastDate === yesterday ? prev.count + 1 : 1;
+      const next = { count, lastDate: today };
+      localStorage.setItem('studyStreak', JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function addXP(amount) {
+    const today = new Date().toISOString().slice(0, 10);
+    setXp(prev => {
+      const next = Math.max(0, prev + amount);
+      localStorage.setItem('userXP', String(next));
+      return next;
+    });
+    setDailyLog(prev => {
+      const next = { ...prev, [today]: Math.max(0, (prev[today] || 0) + amount) };
+      localStorage.setItem('dailyLog', JSON.stringify(next));
+      return next;
+    });
+    updateStreak();
   }
 
   function playAudio(text) {
@@ -2240,6 +2289,9 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
   const [quizAnswered, setQuizAnswered] = useState(null);
   const [quizTimer, setQuizTimer] = useState(null);
   const quizTimerRef = useRef(null);
+  const quizOptionsRef = useRef([]);
+  const quizAnsweredRef = useRef(null);
+  const correctAnswerRef = useRef(null);
   // In hardcore mode, options are Vietnamese meanings; correct answer is allVocab[cardIdx].vi
   const [quizIsHardcore, setQuizIsHardcore] = useState(false);
 
@@ -2247,26 +2299,21 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
     const currentWord = allVocab[cardIdx];
     const isHC = hardcoreMode;
     setQuizIsHardcore(isHC);
-    if (isHC) {
-      // options = Vietnamese meanings, correct = currentWord.vi
-      let options = [currentWord.vi];
-      let attempts = 0;
-      while (options.length < 4 && attempts < 50) {
-        const rand = allVocab[Math.floor(Math.random() * allVocab.length)].vi;
-        if (!options.includes(rand)) options.push(rand);
-        attempts++;
-      }
-      setQuizOptions(options.sort(() => Math.random() - 0.5));
-    } else {
-      let options = [currentWord.word];
-      let attempts = 0;
-      while (options.length < 4 && attempts < 50) {
-        const randomWord = allVocab[Math.floor(Math.random() * allVocab.length)].word;
-        if (!options.includes(randomWord)) options.push(randomWord);
-        attempts++;
-      }
-      setQuizOptions(options.sort(() => Math.random() - 0.5));
+    const correct = isHC ? currentWord.vi : currentWord.word;
+    correctAnswerRef.current = correct;
+    quizAnsweredRef.current = null;
+    let options = [correct];
+    let attempts = 0;
+    while (options.length < 4 && attempts < 50) {
+      const rand = isHC
+        ? allVocab[Math.floor(Math.random() * allVocab.length)].vi
+        : allVocab[Math.floor(Math.random() * allVocab.length)].word;
+      if (!options.includes(rand)) options.push(rand);
+      attempts++;
     }
+    const shuffled = options.sort(() => Math.random() - 0.5);
+    quizOptionsRef.current = shuffled;
+    setQuizOptions(shuffled);
     setQuizAnswered(null);
   }
 
@@ -2289,20 +2336,32 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
     return () => clearInterval(quizTimerRef.current);
   }, [cardIdx, vocabMode, activeModule, hardcoreMode]);
 
+  useEffect(() => { if (hardcoreMode) setHearts(MAX_HEARTS); }, [hardcoreMode]);
+
   useEffect(() => {
-    if (hardcoreMode && vocabMode === 'quiz' && quizTimer === 0 && quizAnswered === null && quizOptions.length > 0) {
-      const correct = quizIsHardcore ? allVocab[cardIdx]?.vi : allVocab[cardIdx]?.word;
-      const wrong = quizOptions.find(o => o !== correct) || quizOptions[0];
-      handleQuizAnswer(wrong);
+    if (hardcoreMode && vocabMode === 'quiz' && quizTimer === 0 && quizAnsweredRef.current === null) {
+      const opts = quizOptionsRef.current;
+      const correct = correctAnswerRef.current;
+      if (opts.length > 0) {
+        const wrong = opts.find(o => o !== correct) || opts[0];
+        handleQuizAnswer(wrong);
+      }
     }
   }, [quizTimer]);
 
   function handleQuizAnswer(selected) {
-    if (quizAnswered) return;
+    if (quizAnsweredRef.current !== null) return;
+    quizAnsweredRef.current = selected;
     setQuizAnswered(selected);
     clearInterval(quizTimerRef.current);
-    const correct = quizIsHardcore ? allVocab[cardIdx].vi : allVocab[cardIdx].word;
-    if (selected === correct) setQuizScore(prev => prev + 1);
+    const correct = correctAnswerRef.current;
+    if (selected === correct) {
+      setQuizScore(prev => prev + 1);
+      addXP(hardcoreMode ? 25 : 10);
+    } else if (hardcoreMode) {
+      addXP(-5);
+      setHearts(h => Math.max(0, h - 1));
+    }
   }
 
   // ── Listen state ──
@@ -2361,6 +2420,9 @@ Chỉ trả về JSON hợp lệ (không markdown, không code block):
       setShadowRecording(false);
       const score = calcSimilarity(allListeningData[shadowIdx].text, shadowTranscriptRef.current);
       setShadowScore(score);
+      if (score >= 80) addXP(20);
+      else if (score >= 50) addXP(10);
+      else addXP(3);
     };
     rec.onerror = () => setShadowRecording(false);
     shadowRecognitionRef.current = rec;
@@ -2596,6 +2658,7 @@ Dạ anh, em Tiểu Nguyên đây. Về câu phản xạ của anh, em có vài 
       const result = await response.json();
       if (result.candidates?.[0]?.content) {
         setSpeakFeedback(result.candidates[0].content.parts[0].text);
+        addXP(10);
       } else {
         setSpeakFeedback("Hệ thống không thể chấm điểm lúc này. Anh thử lại sau nhé.");
       }
@@ -2682,6 +2745,7 @@ Bản sửa chuẩn Executive:
       const result = await response.json();
       if (result.candidates?.[0]?.content) {
         setWriteFeedback(result.candidates[0].content.parts[0].text);
+        addXP(10);
       } else {
         setWriteFeedback("Hệ thống lỗi. Vui lòng thử lại.");
       }
@@ -2772,11 +2836,27 @@ Bản sửa chuẩn Executive:
           </div>
         </div>
       ) : (
-        <div className={`w-full flex-1 flex flex-col bg-white border rounded-3xl p-3 shadow-sm text-center overflow-y-auto min-h-0 ${hardcoreMode && !quizAnswered ? 'border-red-300' : 'border-gray-200'}`}>
+        <div className={`w-full flex-1 flex flex-col bg-white border rounded-3xl p-3 shadow-sm text-center overflow-y-auto min-h-0 relative ${hardcoreMode && !quizAnswered ? 'border-red-300' : 'border-gray-200'}`}>
+          {hardcoreMode && hearts === 0 && (
+            <div className="absolute inset-0 bg-white/95 rounded-3xl flex flex-col items-center justify-center z-10 gap-3">
+              <div className="text-4xl">💔</div>
+              <p className="font-black text-red-600 text-lg">Hết tim rồi!</p>
+              <p className="text-gray-500 text-sm">Nghỉ ngơi một chút rồi tiếp tục nhé</p>
+              <button onClick={() => setHearts(MAX_HEARTS)} className="mt-2 px-4 py-2 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 transition">Hồi phục (×5 ❤️)</button>
+            </div>
+          )}
+          {hardcoreMode && (
+            <div className="flex justify-center gap-1 mb-2 shrink-0">
+              {Array.from({length: MAX_HEARTS}).map((_, i) => (
+                <span key={i} className={`text-base transition-all ${i < hearts ? 'opacity-100' : 'opacity-20'}`}>❤️</span>
+              ))}
+            </div>
+          )}
           {hardcoreMode && !quizAnswered && (
             <div className="shrink-0 mb-2 flex items-center justify-center gap-2">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xl border-4 ${quizTimer <= 1 ? 'border-red-500 text-red-600 animate-ping' : quizTimer <= 2 ? 'border-orange-400 text-orange-500' : 'border-amber-400 text-amber-500'}`}>
-                {quizTimer}
+              <div className="relative w-10 h-10 flex items-center justify-center">
+                <div className={`absolute inset-0 rounded-full border-4 ${quizTimer <= 1 ? 'border-red-500 animate-pulse' : quizTimer <= 2 ? 'border-orange-400' : 'border-amber-400'}`} />
+                <span className={`font-black text-xl z-10 ${quizTimer <= 1 ? 'text-red-600' : quizTimer <= 2 ? 'text-orange-500' : 'text-amber-500'}`}>{quizTimer}</span>
               </div>
               <span className="text-xs font-bold text-red-500 uppercase tracking-wide">Giây còn lại!</span>
             </div>
@@ -2828,7 +2908,7 @@ Bản sửa chuẩn Executive:
                 <p className="text-gray-600 text-xs italic w-[85%]">"{allVocab[cardIdx].ex}"</p>
                 <button onClick={() => playAudio(allVocab[cardIdx].ex)} className="text-blue-500 hover:text-blue-700"><IconPlay /></button>
               </div>
-              <button onClick={() => setCardIdx((prev) => (prev + 1) % allVocab.length)} className="mt-2 w-full py-1.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white text-xs font-bold transition-colors shadow-md shadow-blue-500/30">
+              <button onClick={() => setCardIdx((prev) => randomNext(allVocab.length, prev))} className="mt-2 w-full py-1.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white text-xs font-bold transition-colors shadow-md shadow-blue-500/30">
                 Làm câu tiếp theo
               </button>
             </div>
@@ -2839,7 +2919,7 @@ Bản sửa chuẩn Executive:
       {vocabMode === 'flashcard' && (
         <div className="flex justify-center items-center gap-3 mt-2 shrink-0 w-full">
           <button onClick={() => { setIsFlipped(false); setShowHint(false); setTimeout(() => setCardIdx((prev) => (prev - 1 + allVocab.length) % allVocab.length), 150); }} className="flex-1 py-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl text-gray-700 font-bold text-xs transition-colors shadow-sm">Trước</button>
-          <button onClick={() => { setIsFlipped(false); setShowHint(false); setTimeout(() => setCardIdx((prev) => (prev + 1) % allVocab.length), 150); }} className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-bold text-xs transition-colors shadow-md shadow-blue-500/30">Tiếp theo</button>
+          <button onClick={() => { setIsFlipped(false); setShowHint(false); setTimeout(() => setCardIdx((prev) => randomNext(allVocab.length, prev)), 150); }} className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-bold text-xs transition-colors shadow-md shadow-blue-500/30">Tiếp theo</button>
         </div>
       )}
     </div>
@@ -2910,7 +2990,7 @@ Bản sửa chuẩn Executive:
             <button onClick={() => setShowListenAnswer(!showListenAnswer)} className="flex-1 py-2 bg-white hover:bg-gray-50 rounded-xl text-gray-700 font-bold text-xs border border-gray-300 transition shadow-sm">
               {showListenAnswer ? 'Ẩn đáp án' : 'Xem đáp án'}
             </button>
-            <button onClick={() => { setListenIdx((prev) => (prev + 1) % allListeningData.length); setListenInput(''); setShowListenAnswer(false); }} className="flex-1 py-2 bg-gray-900 hover:bg-gray-800 rounded-xl text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-1.5">
+            <button onClick={() => { setListenIdx((prev) => randomNext(allListeningData.length, prev)); setListenInput(''); setShowListenAnswer(false); addXP(5); }} className="flex-1 py-2 bg-gray-900 hover:bg-gray-800 rounded-xl text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-1.5">
               Câu tiếp <IconRandom />
             </button>
           </div>
@@ -3008,7 +3088,7 @@ Bản sửa chuẩn Executive:
               {shadowPlaying ? '🔊 AI đang đọc 1.2x...' : shadowRecording ? '🎙️ Đang ghi âm bạn...' : '▶ Nghe & Nhại lại'}
             </button>
             <button
-              onClick={() => { setShadowIdx(prev => (prev + 1) % allListeningData.length); setShadowScore(null); setShadowTranscript(''); window.speechSynthesis.cancel(); shadowRecognitionRef.current?.stop(); }}
+              onClick={() => { setShadowIdx(prev => randomNext(allListeningData.length, prev)); setShadowScore(null); setShadowTranscript(''); window.speechSynthesis.cancel(); shadowRecognitionRef.current?.stop(); }}
               className="w-12 h-10 rounded-2xl bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-base"
             >⏭</button>
           </div>
@@ -3071,7 +3151,7 @@ Bản sửa chuẩn Executive:
               else { btnClass = "bg-white border-gray-200 text-gray-400 opacity-50"; }
             }
             return (
-              <button key={i} disabled={readAnswered !== null} onClick={() => setReadAnswered(i)} className={`text-left p-3 rounded-2xl border transition-all flex justify-between items-center text-sm ${btnClass}`}>
+              <button key={i} disabled={readAnswered !== null} onClick={() => { setReadAnswered(i); if (i === allReadingData[readIdx].answerIdx) addXP(15); }} className={`text-left p-3 rounded-2xl border transition-all flex justify-between items-center text-sm ${btnClass}`}>
                 <span className="font-medium">{opt}</span>{icon && <span>{icon}</span>}
               </button>
             );
@@ -3100,7 +3180,7 @@ Bản sửa chuẩn Executive:
             )}
 
             <div className="flex justify-end mt-3">
-              <button onClick={() => { setReadIdx((prev) => (prev + 1) % allReadingData.length); setReadAnswered(null); }} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-xs font-bold shadow-md transition">Bài tiếp theo</button>
+              <button onClick={() => { setReadIdx((prev) => randomNext(allReadingData.length, prev)); setReadAnswered(null); }} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-xs font-bold shadow-md transition">Bài tiếp theo</button>
             </div>
           </div>
         )}
@@ -3170,7 +3250,7 @@ Bản sửa chuẩn Executive:
             placeholder="Nhấn nút Micro và nói tiếng Anh, hoặc anh có thể gõ trực tiếp..."
           />
           <div className="mt-3 flex justify-between items-center">
-            <button onClick={() => { setSpeakIdx(prev => (prev + 1) % speakingData.length); setSpeakTranscript(''); setSpeakFeedback(null); clearInterval(survivalTimerRef.current); setSurvivalActive(false); }} className="text-xs font-semibold text-gray-500 hover:text-gray-800 px-3 py-1.5 border border-gray-200 rounded-lg">Đổi tình huống</button>
+            <button onClick={() => { setSpeakIdx(prev => randomNext(speakingData.length, prev)); setSpeakTranscript(''); setSpeakFeedback(null); clearInterval(survivalTimerRef.current); setSurvivalActive(false); }} className="text-xs font-semibold text-gray-500 hover:text-gray-800 px-3 py-1.5 border border-gray-200 rounded-lg">Đổi tình huống</button>
             <button onClick={handleGradeSpeaking} disabled={isSpeakingGrading || isRecording} className={`px-5 py-2.5 rounded-xl text-white text-sm font-bold flex items-center gap-2 shadow-md transition-colors ${isSpeakingGrading || isRecording ? 'bg-gray-400 cursor-not-allowed' : 'bg-rose-600 hover:bg-rose-700'}`}>
               {isSpeakingGrading ? <IconLoading /> : <IconSparkles />} Gửi AI Đánh Giá
             </button>
@@ -3213,7 +3293,7 @@ Bản sửa chuẩn Executive:
           <button onClick={handleGenerateWritingScenario} disabled={isGeneratingNew} className="text-xs font-semibold text-emerald-600 hover:text-emerald-900 px-3 py-1.5 bg-emerald-50 rounded-lg border border-emerald-200 transition shadow-sm flex items-center gap-1">
             {isGeneratingNew ? <IconLoading /> : <IconSparkles />} Tạo Bằng AI
           </button>
-          <button onClick={() => { setWriteIdx((prev) => (prev + 1) % writingData.length); setWriteInput(''); setWriteFeedback(null); }} className="text-xs font-semibold text-gray-600 hover:text-gray-900 px-3 py-1.5 bg-white rounded-lg border border-gray-200 transition shadow-sm">
+          <button onClick={() => { setWriteIdx((prev) => randomNext(writingData.length, prev)); setWriteInput(''); setWriteFeedback(null); }} className="text-xs font-semibold text-gray-600 hover:text-gray-900 px-3 py-1.5 bg-white rounded-lg border border-gray-200 transition shadow-sm">
             Đổi Tình Huống
           </button>
         </div>
@@ -3315,6 +3395,24 @@ Bản sửa chuẩn Executive:
             <a href="/My-English/ver2/" className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded-md border border-gray-200 hover:bg-gray-200 transition" title="Chuyển sang bản ổn định v2">↩ v2</a>
           </div>
           <div className="flex items-center gap-2">
+            {(() => {
+              const today = new Date().toISOString().slice(0, 10);
+              const xpToday = dailyLog[today] || 0;
+              const streakDanger = streak.count > 0 && xpToday === 0;
+              return (
+                <div className="hidden sm:flex items-center gap-1.5">
+                  <button onClick={() => setShowCalendar(c => !c)} title="Lịch học" className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full border text-xs font-black transition-all ${streakDanger ? 'bg-red-50 border-red-300 text-red-600 animate-pulse' : streak.count > 0 ? 'bg-orange-50 border-orange-200 text-orange-600' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+                    🔥 {streak.count}
+                  </button>
+                  <div className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full border text-xs font-bold ${xpToday >= DAILY_GOAL ? 'bg-green-50 border-green-200 text-green-600' : 'bg-blue-50 border-blue-200 text-blue-500'}`}>
+                    ⚡ {xpToday}/{DAILY_GOAL}
+                  </div>
+                  <div className="flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-purple-600 text-xs font-bold">
+                    🏆 {xp}
+                  </div>
+                </div>
+              );
+            })()}
             <span className="text-xs font-bold px-3 py-1 bg-gray-100 text-gray-500 rounded-full border border-gray-200 hidden sm:block">
               {activeModule === 'vocab' && `Từ Vựng Doanh Nghiệp (${allVocab.length} từ)`}
               {activeModule === 'listen' && 'Luyện Nghe'}
@@ -3330,6 +3428,36 @@ Bản sửa chuẩn Executive:
             </button>
           </div>
         </header>
+
+        {showCalendar && (() => {
+          const calDays = Array.from({length: 35}, (_, i) => {
+            const d = new Date(Date.now() - (34 - i) * 86400000);
+            const key = d.toISOString().slice(0, 10);
+            const todayKey = new Date().toISOString().slice(0, 10);
+            const xpDay = dailyLog[key] || 0;
+            const color = xpDay >= 50 ? 'bg-green-500' : xpDay >= 21 ? 'bg-green-300' : xpDay >= 1 ? 'bg-green-100' : 'bg-gray-100';
+            return { key, color, isToday: key === todayKey };
+          });
+          return (
+            <div className="absolute top-10 right-4 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 w-64">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-xs font-black text-gray-700 uppercase tracking-wide">Lịch Học 35 Ngày</h4>
+                <button onClick={() => setShowCalendar(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none font-bold">×</button>
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {calDays.map(({key, color, isToday}) => (
+                  <div key={key} title={key} className={`w-6 h-6 rounded-sm ${color} ${isToday ? 'ring-2 ring-blue-400' : ''}`} />
+                ))}
+              </div>
+              <div className="flex items-center gap-2 mt-3 text-[10px] text-gray-500 flex-wrap">
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-gray-100 inline-block border border-gray-200"></span>0 XP</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-100 inline-block"></span>1+</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-300 inline-block"></span>21+</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-green-500 inline-block"></span>50+</span>
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="flex-1 p-4 md:p-6 overflow-hidden">
           {activeModule === 'vocab' && renderVocab()}
